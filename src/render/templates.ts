@@ -326,7 +326,7 @@ export function fadeOut(element: HTMLElement, duration = 200): Promise<void> {
  * @public
  */
 export async function swapPrerenderContent(
-  container: HTMLElement,
+  _container: HTMLElement,
   prerenderElement: HTMLElement | null,
   actualElement: HTMLElement
 ): Promise<void> {
@@ -335,7 +335,10 @@ export async function swapPrerenderContent(
     prerenderElement.remove();
   }
 
+  // Reset any hidden state and prepare for fade in
+  actualElement.style.display = '';
+  actualElement.style.visibility = 'visible';
   actualElement.style.opacity = '0';
-  container.appendChild(actualElement);
+
   await fadeIn(actualElement, 150);
 }

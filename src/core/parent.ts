@@ -81,6 +81,7 @@ interface NormalizedOptions<P> {
   eligible?: ComponentOptions<P>['eligible'];
   validate?: ComponentOptions<P>['validate'];
   attributes?: ComponentOptions<P>['attributes'];
+  style?: ComponentOptions<P>['style'];
   autoResize?: ComponentOptions<P>['autoResize'];
   children?: ComponentOptions<P>['children'];
 }
@@ -291,7 +292,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     if (this.destroyed) return;
 
     this.event.emit(EVENT.CLOSE);
-    this.callPropCallback('onClose');
 
     await this.destroy();
   }
@@ -544,6 +544,10 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
           typeof this.options.attributes === 'function'
             ? this.options.attributes(this.props)
             : this.options.attributes,
+        style:
+          typeof this.options.style === 'function'
+            ? this.options.style(this.props)
+            : this.options.style,
       });
 
       // Hide initially (will show after prerender swap)

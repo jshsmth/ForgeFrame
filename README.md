@@ -49,16 +49,31 @@ await instance.render('#container');
 ### Child Page (embedded)
 
 ```typescript
-// The child page automatically has access to window.xprops
-const { email, onLogin, close, resize, parent, getSiblings } = window.xprops;
+import ForgeFrame, { type ChildProps } from 'forgeframe';
 
-// Use the passed props
+// Define your custom props interface
+interface MyProps {
+  email: string;
+  onLogin: (user: { id: number; name: string }) => void;
+}
+
+// Type window.xprops using ChildProps<MyProps>
+declare global {
+  interface Window {
+    xprops?: ChildProps<MyProps>;
+  }
+}
+
+// Now window.xprops is fully typed with your props + ForgeFrame built-ins
+const { email, onLogin, close, resize, parent, getSiblings } = window.xprops!;
+
+// Use the passed props (typed!)
 console.log('Email:', email);
 
 // Call parent callbacks
 await onLogin({ id: 1, name: 'John' });
 
-// Control the frame
+// Control the frame (built-in methods)
 await resize({ width: 500, height: 400 });
 await close();
 ```
@@ -457,6 +472,59 @@ if (LoginComponent.isChild()) {
 ## Child Window API (xprops)
 
 In child windows, `window.xprops` provides access to props and control methods.
+
+### Typing `window.xprops` in TypeScript
+
+ForgeFrame exports `ChildProps<P>`, a generic type that combines your custom props with all built-in ForgeFrame methods. Use this to get full type safety in child pages:
+
+```typescript
+import { type ChildProps } from 'forgeframe';
+
+// 1. Define your custom props interface
+interface MyProps {
+  email: string;
+  count: number;
+  onSubmit: (data: { success: boolean }) => void;
+}
+
+// 2. Declare window.xprops with ChildProps<MyProps>
+declare global {
+  interface Window {
+    xprops?: ChildProps<MyProps>;
+  }
+}
+
+// 3. Now you get full type safety!
+const xprops = window.xprops!;
+
+xprops.email;      // string (your prop)
+xprops.count;      // number (your prop)
+xprops.onSubmit;   // (data: { success: boolean }) => void (your prop)
+xprops.close;      // () => Promise<void> (built-in)
+xprops.resize;     // (dimensions: Dimensions) => Promise<void> (built-in)
+xprops.uid;        // string (built-in)
+```
+
+**Alternative: Using `ForgeFrame.getXProps<P>()`**
+
+You can also use the typed getter function instead of accessing `window.xprops` directly:
+
+```typescript
+import ForgeFrame, { type ChildProps } from 'forgeframe';
+
+interface MyProps {
+  email: string;
+}
+
+// Get typed xprops without window declaration
+const xprops = ForgeFrame.getXProps<MyProps>();
+if (xprops) {
+  console.log(xprops.email);  // Typed!
+  await xprops.close();        // Built-in method
+}
+```
+
+---
 
 ### `ChildProps<P>`
 

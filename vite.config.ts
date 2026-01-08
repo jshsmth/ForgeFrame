@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import mkcert from 'vite-plugin-mkcert';
 
 export default defineConfig({
+  plugins: [mkcert()],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ForgeFrame Playground - Parent</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: #f5f5f5;
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 0.5rem;
+      }
+      .subtitle {
+        color: #666;
+        margin-bottom: 1.5rem;
+      }
+      .section {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .section h3 {
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        color: #666;
+        letter-spacing: 0.05em;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        background: #0066cc;
+        color: white;
+        cursor: pointer;
+        font-size: 0.875rem;
+      }
+      button:hover {
+        background: #0055aa;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      button.secondary {
+        background: #666;
+      }
+      button.secondary:hover {
+        background: #555;
+      }
+      button.danger {
+        background: #cc3333;
+      }
+      button.danger:hover {
+        background: #aa2222;
+      }
+      button.success {
+        background: #28a745;
+      }
+      button.success:hover {
+        background: #218838;
+      }
+      #component-container {
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        height: 450px;
+        background: white;
+        position: relative;
+      }
+      #component-container.has-component {
+        border-style: solid;
+        border-color: #0066cc;
+      }
+      /* Make ForgeFrame wrapper fill container */
+      #component-container > div {
+        width: 100%;
+        height: 100%;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+      .info-card {
+        background: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 4px;
+      }
+      .info-card label {
+        font-size: 0.75rem;
+        color: #666;
+        display: block;
+        margin-bottom: 0.25rem;
+      }
+      .info-card .value {
+        font-weight: 600;
+        color: #333;
+        font-family: monospace;
+      }
+      .log {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #1e1e1e;
+        color: #0f0;
+        font-family: monospace;
+        font-size: 0.8rem;
+        border-radius: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .log-entry {
+        margin: 0.25rem 0;
+      }
+      .log-entry.error {
+        color: #ff6b6b;
+      }
+      .log-entry.success {
+        color: #69db7c;
+      }
+      .log-entry.info {
+        color: #74c0fc;
+      }
+      .context-toggle {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      .context-toggle label {
+        font-size: 0.875rem;
+        color: #666;
+      }
+      select {
+        padding: 0.5rem;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+      }
+      input[type="text"], input[type="number"] {
+        padding: 0.5rem;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        width: 120px;
+      }
+      /* Modal styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+      }
+      .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+      .modal-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 90vw;
+        max-height: 90vh;
+        overflow: hidden;
+        position: relative;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .modal-header h4 {
+        margin: 0;
+        font-size: 0.875rem;
+        color: #333;
+      }
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        color: #666;
+        padding: 0.25rem;
+        line-height: 1;
+      }
+      .modal-close:hover {
+        color: #333;
+      }
+      .modal-body {
+        width: 500px;
+        height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ForgeFrame Playground</h1>
+    <p class="subtitle">Parent window on <strong>https://localhost:5173</strong> embedding child from <strong>https://localhost:5174</strong></p>
+
+    <div class="section">
+      <h3>Component Lifecycle</h3>
+      <div class="context-toggle">
+        <label>Render as:</label>
+        <select id="context-select">
+          <option value="iframe">Iframe (Embedded)</option>
+          <option value="modal">Iframe (Modal)</option>
+          <option value="popup">Popup Window</option>
+        </select>
+      </div>
+      <div class="controls">
+        <button id="btn-render" class="success">Render Component</button>
+        <button id="btn-close" class="danger" disabled>Close Component</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Props & Communication</h3>
+      <div class="controls">
+        <input type="text" id="input-name" placeholder="Name prop" value="World" />
+        <button id="btn-update-name" class="secondary" disabled>Update Name</button>
+        <button id="btn-increment" class="secondary" disabled>Increment Count</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Iframe Controls</h3>
+      <div class="controls">
+        <button id="btn-show" class="secondary" disabled>Show</button>
+        <button id="btn-hide" class="secondary" disabled>Hide</button>
+        <button id="btn-focus" class="secondary" disabled>Focus</button>
+        <input type="number" id="input-height" placeholder="Height" value="420" style="width: 80px;" />
+        <button id="btn-resize" class="secondary" disabled>Resize</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Component State</h3>
+      <div class="info-grid">
+        <div class="info-card">
+          <label>Status</label>
+          <div class="value" id="status">Not rendered</div>
+        </div>
+        <div class="info-card">
+          <label>Context</label>
+          <div class="value" id="context-display">-</div>
+        </div>
+        <div class="info-card">
+          <label>Child Exports</label>
+          <div class="value" id="exports-display">-</div>
+        </div>
+        <div class="info-card">
+          <label>Last Greeting</label>
+          <div class="value" id="greeting-display">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Component Container</h3>
+      <div id="component-container"></div>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <!-- Modal for iframe modal mode -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h4>ForgeFrame Component</h4>
+          <button class="modal-close" id="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" id="modal-container"></div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
