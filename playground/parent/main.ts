@@ -86,6 +86,9 @@ let instance: ForgeFrameComponentInstance<DynamicProps> | null = null;
 let modalOverlay: HTMLElement | null = null;
 let currentPropValues: Record<string, unknown> = {};
 
+// Cache created components to avoid re-registration errors
+const componentCache = new Map<string, ReturnType<typeof ForgeFrame.create<DynamicProps>>>();
+
 // ============================================================================
 // DOM Elements
 // ============================================================================
@@ -423,8 +426,13 @@ function buildPropsSchema(config: PlaygroundConfig) {
 }
 
 function createModalTemplate(config: PlaygroundConfig) {
-  return ForgeFrame.create<DynamicProps>({
-    tag: `${config.tag}-modal`,
+  const cacheKey = `${config.tag}-modal`;
+  if (componentCache.has(cacheKey)) {
+    return componentCache.get(cacheKey)!;
+  }
+
+  const component = ForgeFrame.create<DynamicProps>({
+    tag: cacheKey,
     url: config.url,
     dimensions: { width: 500, height: 400 },
     style: {
@@ -514,10 +522,18 @@ function createModalTemplate(config: PlaygroundConfig) {
     },
     props: buildPropsSchema(config),
   });
+
+  componentCache.set(cacheKey, component);
+  return component;
 }
 
 function createComponent(config: PlaygroundConfig) {
-  return ForgeFrame.create<DynamicProps>({
+  const cacheKey = config.tag;
+  if (componentCache.has(cacheKey)) {
+    return componentCache.get(cacheKey)!;
+  }
+
+  const component = ForgeFrame.create<DynamicProps>({
     tag: config.tag,
     url: config.url,
     dimensions: config.dimensions as { width?: string | number; height?: string | number },
@@ -527,6 +543,9 @@ function createComponent(config: PlaygroundConfig) {
     timeout: config.timeout,
     props: buildPropsSchema(config),
   });
+
+  componentCache.set(cacheKey, component);
+  return component;
 }
 
 async function renderComponent() {
