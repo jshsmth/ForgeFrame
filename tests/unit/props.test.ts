@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   normalizeProps,
   validateProps,
   getPropsForChild,
   propsToQueryParams,
 } from '../../src/props/normalize';
-import { serializeProps, deserializeProps, cloneProps } from '../../src/props/serialize';
+import { cloneProps } from '../../src/props/serialize';
 import { BUILTIN_PROP_DEFINITIONS, getDefaultForType } from '../../src/props/definitions';
-import { PROP_TYPE, PROP_SERIALIZATION } from '../../src/constants';
+import { PROP_TYPE } from '../../src/constants';
 import type { PropsDefinition, PropContext } from '../../src/types';
 
 describe('Props Normalization', () => {

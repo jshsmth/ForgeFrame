@@ -254,7 +254,7 @@ export function fadeIn(element: HTMLElement, duration = 200): Promise<void> {
     element.style.transition = `opacity ${duration}ms ease-in`;
 
     // Force reflow
-    element.offsetHeight;
+    void element.offsetHeight;
 
     element.style.opacity = '1';
 

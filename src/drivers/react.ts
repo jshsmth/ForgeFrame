@@ -258,7 +258,6 @@ export function createReactDriver<P extends Record<string, unknown>, X = unknown
           });
           instanceRef.current = null;
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []); /** Empty dependency array ensures this only runs on mount */
 
       /** Effect: Synchronize prop changes to the cross-domain component */
@@ -269,7 +268,6 @@ export function createReactDriver<P extends Record<string, unknown>, X = unknown
         instance.updateProps(componentProps as Partial<P>).catch((err: Error) => {
           onError?.(err);
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [JSON.stringify(componentProps)]); /** JSON stringify for deep comparison of props */
 
       /** Effect: Forward the ref to the container element for external access */

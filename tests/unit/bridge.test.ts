@@ -8,13 +8,14 @@ import { Messenger } from '../../src/communication/messenger';
 import { MESSAGE_NAME } from '../../src/constants';
 
 // Mock messenger
+type GenericFunction = (...args: unknown[]) => unknown;
 const createMockMessenger = () => {
-  const handlers = new Map<string, Function>();
+  const handlers = new Map<string, GenericFunction>();
 
   return {
     send: vi.fn().mockResolvedValue(undefined),
     post: vi.fn(),
-    on: vi.fn((name: string, handler: Function) => {
+    on: vi.fn((name: string, handler: GenericFunction) => {
       handlers.set(name, handler);
       return () => handlers.delete(name);
     }),
@@ -29,7 +30,7 @@ const createMockMessenger = () => {
       }
       throw new Error('No handler registered');
     },
-  } as unknown as Messenger & { handlers: Map<string, Function>; simulateCall: (id: string, args: unknown[]) => Promise<unknown> };
+  } as unknown as Messenger & { handlers: Map<string, GenericFunction>; simulateCall: (id: string, args: unknown[]) => Promise<unknown> };
 };
 
 describe('FunctionBridge', () => {
