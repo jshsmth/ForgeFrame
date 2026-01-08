@@ -7,7 +7,7 @@ import {
   watchPopupClose,
   resizePopup,
   PopupOpenError,
-} from '../../src/render/popup';
+} from '@/render/popup';
 
 describe('PopupOpenError', () => {
   it('should create error with default message', () => {

@@ -6,8 +6,8 @@ import {
   createResponseMessage,
   createAckMessage,
   PROTOCOL_PREFIX,
-} from '../../src/communication/protocol';
-import { MESSAGE_TYPE } from '../../src/constants';
+} from '@/communication/protocol';
+import { MESSAGE_TYPE } from '@/constants';
 
 describe('PROTOCOL_PREFIX', () => {
   it('should be forgeframe:', () => {

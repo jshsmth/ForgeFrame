@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { EventEmitter } from '../../src/events/emitter';
+import { EventEmitter } from '@/events/emitter';
 
 describe('EventEmitter', () => {
   it('should emit events to subscribed handlers', () => {

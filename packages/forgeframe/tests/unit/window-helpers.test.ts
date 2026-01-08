@@ -14,7 +14,7 @@ import {
   focusWindow,
   closeWindow,
   getFrames,
-} from '../../src/window/helpers';
+} from '@/window/helpers';
 
 describe('getDomain', () => {
   it('should return current window origin', () => {

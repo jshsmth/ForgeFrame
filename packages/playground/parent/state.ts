@@ -1,8 +1,7 @@
 /**
  * State management for ForgeFrame Playground
  */
-import ForgeFrame from '../../src';
-import type { ForgeFrameComponentInstance } from '../../src/types';
+import ForgeFrame, { type ForgeFrameComponentInstance } from 'forgeframe';
 import type { RenderContext, IframeStyle, PlaygroundConfig, DynamicProps } from './types';
 import { DEFAULT_CONFIG } from './config';
 

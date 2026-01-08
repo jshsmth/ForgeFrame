@@ -7,9 +7,9 @@ import {
   destroyComponents,
   destroyAll,
   unregisterComponent,
-} from '../../src/core/component';
-import { isChild, getXProps } from '../../src/core/child';
-import { PROP_TYPE, CONTEXT } from '../../src/constants';
+} from '@/core/component';
+import { isChild, getXProps } from '@/core/child';
+import { PROP_TYPE, CONTEXT } from '@/constants';
 
 describe('Component Creation', () => {
   afterEach(() => {

@@ -7,8 +7,8 @@ import {
   fadeIn,
   fadeOut,
   swapPrerenderContent,
-} from '../../src/render/templates';
-import type { TemplateContext, Dimensions } from '../../src/types';
+} from '@/render/templates';
+import type { TemplateContext, Dimensions } from '@/types';
 
 describe('Template Functions', () => {
   beforeEach(() => {

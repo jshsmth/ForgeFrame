@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createReactDriver, withReactDriver } from '../../src/drivers/react';
-import type { ZoidComponent, ZoidComponentInstance } from '../../src/types';
-import type { EventEmitter } from '../../src/events/emitter';
+import { createReactDriver, withReactDriver } from '@/drivers/react';
+import type { ZoidComponent, ZoidComponentInstance } from '@/types';
+import type { EventEmitter } from '@/events/emitter';
 
 // Mock React hooks and APIs
 const createMockReact = () => {

@@ -1,7 +1,7 @@
 /**
  * Component rendering for ForgeFrame Playground
  */
-import ForgeFrame from '../../src';
+import ForgeFrame from 'forgeframe';
 import { elements } from './elements';
 import { log, setStatus, setButtonsEnabled } from './logger';
 import {

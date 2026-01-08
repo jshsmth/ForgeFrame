@@ -1,52 +1,27 @@
 {
-  "name": "forgeframe",
-  "version": "1.0.0",
-  "description": "Modern cross-domain iframe component framework - a TypeScript alternative to zoid",
+  "name": "forgeframe-monorepo",
+  "private": true,
   "type": "module",
-  "module": "./dist/forgeframe.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/forgeframe.js"
-    }
-  },
-  "sideEffects": false,
-  "files": [
-    "dist"
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "dev": "vite",
-    "dev:parent": "vite --config vite.config.parent.ts",
-    "dev:child": "vite --config vite.config.child.ts",
-    "dev:playground": "concurrently \"npm run dev:parent\" \"npm run dev:child\"",
-    "build": "vite build && tsc --emitDeclarationOnly",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "release": "npm run build && npm publish",
-    "release:patch": "npm version patch && npm run release && git push && git push --tags",
-    "release:minor": "npm version minor && npm run release && git push && git push --tags",
-    "release:major": "npm version major && npm run release && git push && git push --tags"
-  },
-  "keywords": [
-    "iframe",
-    "cross-domain",
-    "component",
-    "zoid",
-    "postmessage",
-    "popup",
-    "embed"
-  ],
-  "author": "Josh Smith",
-  "license": "MIT",
-  "homepage": "https://github.com/jshsmth/ForgeFrame#readme",
-  "bugs": {
-    "url": "https://github.com/jshsmth/ForgeFrame/issues"
+    "clean": "npm run clean -w forgeframe && npm run clean -w @forgeframe/playground",
+    "dev": "npm run dev -w @forgeframe/playground",
+    "dev:parent": "npm run dev:parent -w @forgeframe/playground",
+    "dev:child": "npm run dev:child -w @forgeframe/playground",
+    "build": "npm run build -w forgeframe",
+    "build:playground": "npm run build -w @forgeframe/playground",
+    "typecheck": "npm run typecheck -w forgeframe",
+    "lint": "eslint packages/",
+    "lint:fix": "eslint packages/ --fix",
+    "test": "npm run test -w forgeframe",
+    "test:run": "npm run test:run -w forgeframe",
+    "test:coverage": "npm run test:coverage -w forgeframe",
+    "release": "npm run build -w forgeframe && npm publish -w forgeframe",
+    "release:patch": "npm version patch -w forgeframe && npm run release && git push && git push --tags",
+    "release:minor": "npm version minor -w forgeframe && npm run release && git push && git push --tags",
+    "release:major": "npm version major -w forgeframe && npm run release && git push && git push --tags"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -61,9 +36,5 @@
     "vite": "^7.2.4",
     "vite-plugin-mkcert": "^1.17.9",
     "vitest": "^3.1.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jshsmth/ForgeFrame.git"
   }
 }

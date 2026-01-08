@@ -8,7 +8,7 @@ import {
   hideIframe,
   focusIframe,
   getIframeContentDimensions,
-} from '../../src/render/iframe';
+} from '@/render/iframe';
 
 describe('createIframe', () => {
   let container: HTMLDivElement;

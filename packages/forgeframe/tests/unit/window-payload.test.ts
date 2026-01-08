@@ -7,9 +7,9 @@ import {
   createWindowPayload,
   updateWindowName,
   getInitialPayload,
-} from '../../src/window/name-payload';
-import { WINDOW_NAME_PREFIX, VERSION, CONTEXT } from '../../src/constants';
-import type { WindowNamePayload } from '../../src/types';
+} from '@/window/name-payload';
+import { WINDOW_NAME_PREFIX, VERSION, CONTEXT } from '@/constants';
+import type { WindowNamePayload } from '@/types';
 
 describe('buildWindowName', () => {
   it('should create window name with prefix', () => {
