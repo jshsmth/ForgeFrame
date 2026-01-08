@@ -105,7 +105,6 @@ export function openPopup(options: PopupOptions): Window {
   const width = normalizeDimensionForPopup(dimensions.width, 500);
   const height = normalizeDimensionForPopup(dimensions.height, 500);
 
-  // Center on screen
   const left = Math.floor(window.screenX + (window.outerWidth - width) / 2);
   const top = Math.floor(window.screenY + (window.outerHeight - height) / 2);
 
@@ -336,7 +335,6 @@ function normalizeDimensionForPopup(
   if (value === undefined) return fallback;
   if (typeof value === 'number') return value;
 
-  // Try to parse pixel value
   const parsed = parseInt(value, 10);
   return isNaN(parsed) ? fallback : parsed;
 }

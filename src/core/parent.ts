@@ -185,10 +185,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     this.messenger = new Messenger(this.uid, window, getDomain());
     this.bridge = new FunctionBridge(this.messenger);
 
-    // Create prop context
     const propContext = this.createPropContext();
-
-    // Normalize and validate props
     this.props = normalizeProps(props as Partial<P>, this.options.props, propContext);
 
     this.setupMessageHandlers();
@@ -227,36 +224,24 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
 
     this.context = context ?? this.options.defaultContext;
 
-    // Check eligibility
     this.checkEligibility();
-
-    // Validate props
     validateProps(this.props, this.options.props);
-
-    // Resolve container
     this.container = this.resolveContainer(container);
 
-    // Emit prerender
     this.event.emit(EVENT.PRERENDER);
     this.callPropCallback('onPrerender');
 
-    // Create prerender element
     await this.prerender();
 
     this.event.emit(EVENT.PRERENDERED);
     this.callPropCallback('onPrerendered');
 
-    // Emit render
     this.event.emit(EVENT.RENDER);
     this.callPropCallback('onRender');
 
-    // Open child window
     await this.open();
-
-    // Wait for child to initialize
     await this.waitForChild();
 
-    // Swap prerender with actual content
     if (this.context === CONTEXT.IFRAME && this.iframe && this.prerenderElement) {
       await swapPrerenderContent(
         this.container,
@@ -268,11 +253,9 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
 
     this.rendered = true;
 
-    // Emit rendered
     this.event.emit(EVENT.RENDERED);
     this.callPropCallback('onRendered');
 
-    // Emit display
     this.event.emit(EVENT.DISPLAY);
     this.callPropCallback('onDisplay');
   }
@@ -386,7 +369,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       propContext
     );
 
-    // Send updated props to child
     if (this.childWindow && !isWindowClosed(this.childWindow)) {
       const childDomain = this.getChildDomain();
       const propsForChild = getPropsForChild(
@@ -515,8 +497,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       this.options.containerTemplate ?? defaultContainerTemplate;
 
     const dimensions = this.options.dimensions;
-
-    // Get cspNonce from props if available
     const cspNonce = (this.props as Record<string, unknown>).cspNonce as string | undefined;
 
     const templateContext: TemplateContext<P> & { cspNonce?: string } = {
@@ -534,14 +514,12 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       cspNonce,
     };
 
-    // Create container element
     const containerEl = containerTemplateFn(templateContext);
     if (containerEl) {
       this.container.appendChild(containerEl);
       this.container = containerEl;
     }
 
-    // Create prerender element
     this.prerenderElement = templateFn(templateContext);
     if (this.prerenderElement) {
       this.container.appendChild(this.prerenderElement);
@@ -579,7 +557,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
         dimensions: this.options.dimensions,
       });
 
-      // Watch for popup close
       const stopWatching = watchPopupClose(this.childWindow, () => {
         this.destroy();
       });
@@ -601,7 +578,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
         ? this.options.url(this.props)
         : this.options.url;
 
-    // Add query params from props
     const queryParams = propsToQueryParams(this.props, this.options.props);
     const queryString = queryParams.toString();
 
@@ -630,7 +606,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       this.bridge
     );
 
-    // Build children refs if defined
     const childrenRefs = this.buildChildrenRefs();
 
     const payload = createWindowPayload({
@@ -657,17 +632,12 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     const refs: Record<string, ChildComponentRef> = {};
 
     for (const [name, component] of Object.entries(childComponents)) {
-      // Extract component options from the component
-      // The component is a ZoidComponent which has internal options
       const componentAny = component as ZoidComponent & {
         _options?: ComponentOptions<Record<string, unknown>>;
         tag?: string;
         url?: string | ((props: Record<string, unknown>) => string);
       };
 
-      // Try to get options from the component
-      // Since ZoidComponent is a function with attached properties,
-      // we need to access the underlying options
       refs[name] = {
         tag: componentAny.tag ?? name,
         url: typeof componentAny.url === 'function'
@@ -744,37 +714,31 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       return { success: true };
     });
 
-    // Handle close request from child
     this.messenger.on(MESSAGE_NAME.CLOSE, async () => {
       await this.close();
       return { success: true };
     });
 
-    // Handle resize request from child
     this.messenger.on<Dimensions>(MESSAGE_NAME.RESIZE, async (dimensions) => {
       await this.resize(dimensions);
       return { success: true };
     });
 
-    // Handle focus request from child
     this.messenger.on(MESSAGE_NAME.FOCUS, async () => {
       await this.focus();
       return { success: true };
     });
 
-    // Handle show request from child
     this.messenger.on(MESSAGE_NAME.SHOW, async () => {
       await this.show();
       return { success: true };
     });
 
-    // Handle hide request from child
     this.messenger.on(MESSAGE_NAME.HIDE, async () => {
       await this.hide();
       return { success: true };
     });
 
-    // Handle error from child
     this.messenger.on<{ message: string; stack?: string }>(
       MESSAGE_NAME.ERROR,
       async (errorData) => {
@@ -785,32 +749,25 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       }
     );
 
-    // Handle exports from child
     this.messenger.on<X>(MESSAGE_NAME.EXPORT, async (exports) => {
       this.exports = exports;
       return { success: true };
     });
 
-    // Handle parent exports from child (bidirectional)
     this.messenger.on<unknown>(MESSAGE_NAME.PARENT_EXPORT, async (data) => {
       this.parentExports = data;
       return { success: true };
     });
 
-    // Handle getSiblings request from child
     this.messenger.on<{ uid: string; tag: string; options?: GetSiblingsOptions }>(
       MESSAGE_NAME.GET_SIBLINGS,
       async (request) => {
         const siblings: SiblingInfo[] = [];
 
-        // Get the component by tag
         const component = getComponent(request.tag);
         if (component) {
           for (const instance of component.instances) {
-            // Skip self
-            if (instance.uid === request.uid) {
-              continue;
-            }
+            if (instance.uid === request.uid) continue;
 
             siblings.push({
               uid: instance.uid,
@@ -820,11 +777,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
           }
         }
 
-        // If anyParent option, also check other component types
-        if (request.options?.anyParent) {
-          // Would need to iterate all components in registry
-          // For now, just return siblings of same tag
-        }
+        // TODO: If anyParent option, iterate all components in registry
 
         return siblings;
       }
@@ -876,26 +829,22 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     if (this.destroyed) return;
     this.destroyed = true;
 
-    // Destroy iframe
     if (this.iframe) {
       destroyIframe(this.iframe);
       this.iframe = null;
     }
 
-    // Close popup
     if (this.context === CONTEXT.POPUP && this.childWindow) {
       closePopup(this.childWindow);
     }
 
     this.childWindow = null;
 
-    // Remove prerender element
     if (this.prerenderElement) {
       this.prerenderElement.remove();
       this.prerenderElement = null;
     }
 
-    // Cleanup
     await this.cleanup.cleanup();
 
     this.event.emit(EVENT.DESTROY);

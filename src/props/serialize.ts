@@ -37,10 +37,8 @@ function toDotNotation(
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
     if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      // Recurse into nested objects
       parts.push(toDotNotation(value as Record<string, unknown>, fullKey));
     } else {
-      // Encode value (handle arrays and primitives)
       const encodedValue = encodeURIComponent(JSON.stringify(value));
       parts.push(`${fullKey}=${encodedValue}`);
     }
@@ -70,7 +68,6 @@ function fromDotNotation(str: string): Record<string, unknown> {
     const [path, encodedValue] = pair.split('=');
     if (!path || encodedValue === undefined) continue;
 
-    // Decode and parse the value
     let value: unknown;
     try {
       value = JSON.parse(decodeURIComponent(encodedValue));
@@ -78,7 +75,6 @@ function fromDotNotation(str: string): Record<string, unknown> {
       value = decodeURIComponent(encodedValue);
     }
 
-    // Set the value at the nested path
     const keys = path.split('.');
     let current = result;
 
@@ -302,13 +298,10 @@ export function cloneProps<P extends Record<string, unknown>>(
 
   for (const [key, value] of Object.entries(props)) {
     if (typeof value === 'function') {
-      // Functions are passed by reference
       (result as Record<string, unknown>)[key] = value;
     } else if (typeof value === 'object' && value !== null) {
-      // Deep clone objects
       (result as Record<string, unknown>)[key] = structuredClone(value);
     } else {
-      // Primitives are copied directly
       (result as Record<string, unknown>)[key] = value;
     }
   }

@@ -67,16 +67,13 @@ export function createIframe(options: IframeOptions): HTMLIFrameElement {
 
   const iframe = document.createElement('iframe');
 
-  // Set essential attributes
   iframe.name = name;
   iframe.setAttribute('frameborder', '0');
   iframe.setAttribute('allowtransparency', 'true');
   iframe.setAttribute('scrolling', 'no');
 
-  // Set dimensions
   applyDimensions(iframe, dimensions);
 
-  // Set custom attributes
   for (const [key, value] of Object.entries(attributes)) {
     if (value === undefined) continue;
 
@@ -99,8 +96,6 @@ export function createIframe(options: IframeOptions): HTMLIFrameElement {
 
   // Add to container first (some browsers need this before setting src)
   container.appendChild(iframe);
-
-  // Set src last to start loading
   iframe.src = url;
 
   return iframe;
@@ -174,12 +169,10 @@ export function createPrerenderIframe(
  */
 export function destroyIframe(iframe: HTMLIFrameElement): void {
   try {
-    // Clear src to stop loading
     iframe.src = 'about:blank';
-    // Remove from DOM
     iframe.parentNode?.removeChild(iframe);
   } catch {
-    // Ignore errors during cleanup
+    // Cleanup errors are expected for cross-origin iframes
   }
 }
 

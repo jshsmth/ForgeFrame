@@ -104,20 +104,11 @@ export class ChildComponent<P extends Record<string, unknown>> {
     this.parentDomain = payload.parentDomain;
     this.event = new EventEmitter();
 
-    // Resolve parent window
     this.parentWindow = this.resolveParentWindow();
-
-    // Setup communication
     this.messenger = new Messenger(this.uid, window, getDomain());
     this.bridge = new FunctionBridge(this.messenger);
-
-    // Build xprops
     this.xprops = this.buildXProps(payload);
-
-    // Expose to window
     (window as unknown as { xprops: ChildProps<P> }).xprops = this.xprops;
-
-    // Setup message handlers
     this.setupMessageHandlers();
 
     this.sendInit();
@@ -137,13 +128,11 @@ export class ChildComponent<P extends Record<string, unknown>> {
    * @internal
    */
   private resolveParentWindow(): Window {
-    // Check if we're in an iframe
     if (isIframe()) {
       const parent = getParent();
       if (parent) return parent;
     }
 
-    // Check if we're a popup
     if (isPopup()) {
       const opener = getOpener();
       if (opener) return opener;
@@ -357,7 +346,6 @@ export class ChildComponent<P extends Record<string, unknown>> {
 
     for (const [name, ref] of Object.entries(childrenRefs)) {
       try {
-        // Create a component from the ref
         children[name] = create({
           tag: ref.tag,
           url: ref.url,

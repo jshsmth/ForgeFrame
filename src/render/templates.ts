@@ -41,7 +41,6 @@ export function defaultContainerTemplate<P>(
   container.id = `forgeframe-container-${uid}`;
   container.setAttribute('data-forgeframe-tag', tag);
 
-  // Apply base styles
   Object.assign(container.style, {
     display: 'inline-block',
     position: 'relative',
@@ -107,7 +106,6 @@ export function defaultPrerenderTemplate<P>(
     zIndex: '100',
   });
 
-  // Create spinner
   const spinner = doc.createElement('div');
   Object.assign(spinner.style, {
     width: '40px',
@@ -118,7 +116,6 @@ export function defaultPrerenderTemplate<P>(
     animation: 'forgeframe-spin 1s linear infinite',
   });
 
-  // Add keyframes animation
   const style = doc.createElement('style');
   if (cspNonce) {
     style.setAttribute('nonce', cspNonce);
@@ -333,13 +330,11 @@ export async function swapPrerenderContent(
   prerenderElement: HTMLElement | null,
   actualElement: HTMLElement
 ): Promise<void> {
-  // Hide prerender
   if (prerenderElement) {
     await fadeOut(prerenderElement, 150);
     prerenderElement.remove();
   }
 
-  // Show actual content
   actualElement.style.opacity = '0';
   container.appendChild(actualElement);
   await fadeIn(actualElement, 150);

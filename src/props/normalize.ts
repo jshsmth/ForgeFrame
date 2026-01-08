@@ -44,7 +44,6 @@ export function normalizeProps<P extends Record<string, unknown>>(
     const definition = def as PropDefinition<unknown, P>;
     let value: unknown;
 
-    // Check for alias
     const aliasKey = definition.alias;
     const hasValue = key in userProps;
     const hasAliasValue = aliasKey && aliasKey in userProps;
@@ -54,17 +53,14 @@ export function normalizeProps<P extends Record<string, unknown>>(
     } else if (hasAliasValue) {
       value = userProps[aliasKey as keyof P];
     } else if (definition.value) {
-      // Computed value
       value = definition.value(context);
     } else if (definition.default !== undefined) {
-      // Default value
       value =
         typeof definition.default === 'function'
           ? (definition.default as (ctx: PropContext<P>) => unknown)(context)
           : definition.default;
     }
 
-    // Apply decorator if present
     if (value !== undefined && definition.decorate) {
       value = definition.decorate({ value, props: result as P });
     }
@@ -98,22 +94,18 @@ export function validateProps<P extends Record<string, unknown>>(
     const definition = def as PropDefinition<unknown, P>;
     const value = props[key as keyof P];
 
-    // Check required
     if (definition.required && value === undefined) {
       throw new Error(`Prop "${key}" is required but was not provided`);
     }
 
-    // Skip validation if undefined and not required
     if (value === undefined) continue;
 
-    // Type validation
     if (!validateType(value, definition.type)) {
       throw new Error(
         `Prop "${key}" expected type "${definition.type}" but got "${typeof value}"`
       );
     }
 
-    // Custom validation
     if (definition.validate) {
       definition.validate({ value, props });
     }
@@ -175,19 +167,14 @@ export function getPropsForChild<P extends Record<string, unknown>>(
     const definition = def as PropDefinition<unknown, P>;
     const value = props[key as keyof P];
 
-    // Skip if explicitly not sent to child
     if (definition.sendToChild === false) continue;
-
-    // Skip if same domain only and not same domain
     if (definition.sameDomain && !isSameDomain) continue;
 
-    // Skip if trusted domains don't match
     if (definition.trustedDomains) {
       const trusted = definition.trustedDomains as DomainMatcher;
       if (!matchDomain(trusted, childDomain)) continue;
     }
 
-    // Apply child decoration if present
     let finalValue = value;
     if (definition.childDecorate && value !== undefined) {
       finalValue = definition.childDecorate({ value, props }) as P[keyof P];
@@ -224,18 +211,12 @@ export function propsToQueryParams<P extends Record<string, unknown>>(
     const value = props[key as keyof P];
 
     if (value === undefined) continue;
-
-    // Skip functions - they can't be query params
     if (definition.type === PROP_TYPE.FUNCTION) continue;
-
-    // Check if this prop should be a query param
     if (!definition.queryParam) continue;
 
-    // Get param name (could be custom)
     const paramName =
       typeof definition.queryParam === 'string' ? definition.queryParam : key;
 
-    // Get param value
     let paramValue: string;
     if (typeof definition.queryParam === 'function') {
       paramValue = definition.queryParam({ value });
