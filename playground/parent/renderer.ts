@@ -7,7 +7,6 @@ import { log, setStatus, setButtonsEnabled } from './logger';
 import {
   currentContext,
   currentIframeStyle,
-  currentConfig,
   currentPropValues,
   componentCache,
   instance,

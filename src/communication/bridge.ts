@@ -36,9 +36,11 @@ import type { Messenger } from './messenger';
  */
 export class FunctionBridge {
   /** @internal */
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   private localFunctions = new Map<string, Function>();
 
   /** @internal */
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   private remoteFunctions = new Map<string, Function>();
 
   /**
@@ -57,6 +59,7 @@ export class FunctionBridge {
    * @param name - Optional name for debugging
    * @returns A function reference that can be sent across domains
    */
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   serialize(fn: Function, name?: string): FunctionRef {
     const id = generateShortUID();
     this.localFunctions.set(id, fn);
@@ -84,6 +87,7 @@ export class FunctionBridge {
     ref: FunctionRef,
     targetWin: Window,
     targetDomain: string
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   ): Function {
     const cacheKey = `${ref.__id__}`;
     const cached = this.remoteFunctions.get(cacheKey);

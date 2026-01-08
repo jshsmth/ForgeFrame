@@ -29,7 +29,7 @@ describe('buildWindowName', () => {
   });
 
   it('should encode payload as base64', () => {
-    const payload: WindowNamePayload<{}> = {
+    const payload: WindowNamePayload<Record<string, never>> = {
       uid: 'test-uid',
       tag: 'test-component',
       version: VERSION,
@@ -100,7 +100,7 @@ describe('parseWindowName', () => {
 
 describe('isForgeFrameWindow', () => {
   it('should return true for ForgeFrame window', () => {
-    const payload: WindowNamePayload<{}> = {
+    const payload: WindowNamePayload<Record<string, never>> = {
       uid: 'test-uid',
       tag: 'test-component',
       version: VERSION,
@@ -140,7 +140,7 @@ describe('isForgeFrameWindow', () => {
 
 describe('isChildOfComponent', () => {
   it('should return true for matching tag', () => {
-    const payload: WindowNamePayload<{}> = {
+    const payload: WindowNamePayload<Record<string, never>> = {
       uid: 'test-uid',
       tag: 'my-component',
       version: VERSION,
@@ -158,7 +158,7 @@ describe('isChildOfComponent', () => {
   });
 
   it('should return false for non-matching tag', () => {
-    const payload: WindowNamePayload<{}> = {
+    const payload: WindowNamePayload<Record<string, never>> = {
       uid: 'test-uid',
       tag: 'other-component',
       version: VERSION,
@@ -223,7 +223,7 @@ describe('createWindowPayload', () => {
 describe('updateWindowName', () => {
   it('should update window name with new payload', () => {
     const win = { name: '' } as Window;
-    const payload: WindowNamePayload<{}> = {
+    const payload: WindowNamePayload<Record<string, never>> = {
       uid: 'new-uid',
       tag: 'test-tag',
       version: VERSION,
@@ -246,7 +246,7 @@ describe('updateWindowName', () => {
       },
     } as unknown as Window;
 
-    const payload: WindowNamePayload<{}> = {
+    const payload: WindowNamePayload<Record<string, never>> = {
       uid: 'test-uid',
       tag: 'test-tag',
       version: VERSION,

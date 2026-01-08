@@ -22,7 +22,7 @@ const createMockReact = () => {
       }
       return refs.get(key)!;
     }),
-    useEffect: vi.fn((effect, deps) => {
+    useEffect: vi.fn((effect) => {
       effectCallback = effect;
     }),
     useState: vi.fn((initial) => {
@@ -121,7 +121,7 @@ describe('createReactDriver', () => {
   it('should render container div', () => {
     const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
 
-    const result = ReactComponent({});
+    ReactComponent({});
 
     expect(mockReact.createElement).toHaveBeenCalledWith('div', expect.objectContaining({
       style: expect.objectContaining({
@@ -314,13 +314,13 @@ describe('Error handling', () => {
     const ReactComponent = createReactDriver(mockComponent, { React: customMockReact as never });
 
     // First render - no error
-    let result = ReactComponent({});
+    ReactComponent({});
 
     // Simulate error being set
     customMockReact.useState.mockReturnValueOnce([new Error('Test error'), vi.fn()]);
 
     // Re-render with error
-    result = ReactComponent({});
+    ReactComponent({});
 
     // Should render error div
     expect(customMockReact.createElement).toHaveBeenCalledWith(
