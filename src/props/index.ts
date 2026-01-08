@@ -1,3 +1,12 @@
+/**
+ * @packageDocumentation
+ * Props handling module for ForgeFrame.
+ *
+ * @remarks
+ * This module handles prop normalization, validation, serialization, and
+ * deserialization for cross-domain component communication.
+ */
+
 export {
   BUILTIN_PROP_DEFINITIONS,
   getDefaultForType,

@@ -1,23 +1,57 @@
 import type { DomainMatcher } from '../types';
 
 /**
- * Get the current window's domain (origin)
+ * Gets the domain (origin) of the specified window.
+ *
+ * @param win - The window to get the domain from. Defaults to the current window.
+ * @returns The origin string (e.g., "https://example.com") or an empty string if cross-origin access is denied.
+ *
+ * @remarks
+ * This function safely handles cross-origin windows by catching security exceptions
+ * and returning an empty string instead of throwing.
+ *
+ * @example
+ * ```typescript
+ * // Get current window's domain
+ * const domain = getDomain();
+ *
+ * // Get an iframe's domain
+ * const iframeDomain = getDomain(iframe.contentWindow);
+ * ```
+ *
+ * @public
  */
 export function getDomain(win: Window = window): string {
   try {
     return win.location.origin;
   } catch {
-    // Cross-origin access denied
     return '';
   }
 }
 
 /**
- * Check if a window is from the same domain
+ * Checks if a window is from the same domain as a reference window.
+ *
+ * @param win - The window to check.
+ * @param reference - The reference window to compare against. Defaults to the current window.
+ * @returns `true` if both windows share the same origin, `false` otherwise.
+ *
+ * @remarks
+ * This function compares the origin of both windows. If cross-origin access
+ * throws a security exception, it returns `false`.
+ *
+ * @example
+ * ```typescript
+ * // Check if an iframe is same-origin
+ * if (isSameDomain(iframe.contentWindow)) {
+ *   // Safe to access iframe's DOM directly
+ * }
+ * ```
+ *
+ * @public
  */
 export function isSameDomain(win: Window, reference: Window = window): boolean {
   try {
-    // If we can access the location, it's same domain
     return win.location.origin === reference.location.origin;
   } catch {
     return false;
@@ -25,16 +59,43 @@ export function isSameDomain(win: Window, reference: Window = window): boolean {
 }
 
 /**
- * Check if a domain matches a pattern
+ * Checks if a domain matches a given pattern.
+ *
+ * @param pattern - The pattern to match against. Can be a string (exact match or `"*"` wildcard),
+ *                  a RegExp, or an array of patterns.
+ * @param domain - The domain string to test.
+ * @returns `true` if the domain matches the pattern, `false` otherwise.
+ *
+ * @remarks
+ * Pattern matching rules:
+ * - `"*"` matches any domain
+ * - String patterns require exact match
+ * - RegExp patterns use `.test()` method
+ * - Array patterns return `true` if any element matches (OR logic)
+ *
+ * @example
+ * ```typescript
+ * // Wildcard - matches everything
+ * matchDomain('*', 'https://example.com'); // true
+ *
+ * // Exact match
+ * matchDomain('https://example.com', 'https://example.com'); // true
+ *
+ * // RegExp match
+ * matchDomain(/\.example\.com$/, 'https://sub.example.com'); // true
+ *
+ * // Array of patterns
+ * matchDomain(['https://a.com', 'https://b.com'], 'https://b.com'); // true
+ * ```
+ *
+ * @public
  */
 export function matchDomain(
   pattern: DomainMatcher,
   domain: string
 ): boolean {
   if (typeof pattern === 'string') {
-    // Wildcard matches everything
     if (pattern === '*') return true;
-    // Exact match
     return pattern === domain;
   }
 
@@ -50,7 +111,25 @@ export function matchDomain(
 }
 
 /**
- * Check if a window is closed
+ * Checks if a window is closed or inaccessible.
+ *
+ * @param win - The window to check, or `null`.
+ * @returns `true` if the window is `null`, closed, or inaccessible; `false` otherwise.
+ *
+ * @remarks
+ * This function safely handles cross-origin errors. If accessing the window's
+ * `closed` property throws, the window is considered closed or inaccessible.
+ *
+ * @example
+ * ```typescript
+ * const popup = window.open('https://example.com');
+ * // Later...
+ * if (isWindowClosed(popup)) {
+ *   console.log('Popup was closed');
+ * }
+ * ```
+ *
+ * @public
  */
 export function isWindowClosed(win: Window | null): boolean {
   if (!win) return true;
@@ -58,13 +137,30 @@ export function isWindowClosed(win: Window | null): boolean {
   try {
     return win.closed;
   } catch {
-    // Cross-origin error usually means window is closed or inaccessible
     return true;
   }
 }
 
 /**
- * Get the opener window (for popups)
+ * Gets the opener window for a popup window.
+ *
+ * @param win - The popup window. Defaults to the current window.
+ * @returns The opener window, or `null` if not a popup or cross-origin access is denied.
+ *
+ * @remarks
+ * The opener is the window that called `window.open()` to create this popup.
+ * This function safely handles cross-origin errors.
+ *
+ * @example
+ * ```typescript
+ * // In a popup window
+ * const parent = getOpener();
+ * if (parent) {
+ *   // Communicate with opener
+ * }
+ * ```
+ *
+ * @public
  */
 export function getOpener(win: Window = window): Window | null {
   try {
@@ -75,12 +171,29 @@ export function getOpener(win: Window = window): Window | null {
 }
 
 /**
- * Get the parent window (for iframes)
+ * Gets the parent window for an iframe.
+ *
+ * @param win - The iframe window. Defaults to the current window.
+ * @returns The parent window, or `null` if not in an iframe or cross-origin access is denied.
+ *
+ * @remarks
+ * Returns `null` if the window is the top-level window (i.e., `parent === self`).
+ * This function safely handles cross-origin errors.
+ *
+ * @example
+ * ```typescript
+ * // In an iframe
+ * const parent = getParent();
+ * if (parent) {
+ *   // Communicate with parent frame
+ * }
+ * ```
+ *
+ * @public
  */
 export function getParent(win: Window = window): Window | null {
   try {
     const parent = win.parent;
-    // Check if we're actually in an iframe (parent !== self)
     if (parent && parent !== win) {
       return parent;
     }
@@ -91,7 +204,24 @@ export function getParent(win: Window = window): Window | null {
 }
 
 /**
- * Get the top-level window
+ * Gets the top-level window in the frame hierarchy.
+ *
+ * @param win - The window to get the top from. Defaults to the current window.
+ * @returns The top-level window, or `null` if cross-origin access is denied.
+ *
+ * @remarks
+ * The top window is the outermost window in a nested iframe hierarchy.
+ * This function safely handles cross-origin errors.
+ *
+ * @example
+ * ```typescript
+ * const topWindow = getTop();
+ * if (topWindow === window) {
+ *   console.log('We are the top-level window');
+ * }
+ * ```
+ *
+ * @public
  */
 export function getTop(win: Window = window): Window | null {
   try {
@@ -102,19 +232,52 @@ export function getTop(win: Window = window): Window | null {
 }
 
 /**
- * Check if current window is an iframe
+ * Checks if the specified window is running inside an iframe.
+ *
+ * @param win - The window to check. Defaults to the current window.
+ * @returns `true` if the window is in an iframe, `false` if it's the top-level window.
+ *
+ * @remarks
+ * A window is considered to be in an iframe if `parent !== self`.
+ * If cross-origin access throws an exception, returns `true` as a conservative assumption.
+ *
+ * @example
+ * ```typescript
+ * if (isIframe()) {
+ *   console.log('Running inside an iframe');
+ * } else {
+ *   console.log('Running as top-level window');
+ * }
+ * ```
+ *
+ * @public
  */
 export function isIframe(win: Window = window): boolean {
   try {
     return win.parent !== win;
   } catch {
-    // If we can't access parent, assume we might be in an iframe
     return true;
   }
 }
 
 /**
- * Check if current window is a popup (has opener)
+ * Checks if the specified window is a popup (opened via `window.open()`).
+ *
+ * @param win - The window to check. Defaults to the current window.
+ * @returns `true` if the window has an opener (is a popup), `false` otherwise.
+ *
+ * @remarks
+ * A popup window is one that was opened using `window.open()` and has an `opener` reference.
+ * This function safely handles cross-origin errors by returning `false`.
+ *
+ * @example
+ * ```typescript
+ * if (isPopup()) {
+ *   console.log('This window was opened as a popup');
+ * }
+ * ```
+ *
+ * @public
  */
 export function isPopup(win: Window = window): boolean {
   try {
@@ -125,8 +288,26 @@ export function isPopup(win: Window = window): boolean {
 }
 
 /**
- * Get the ancestor window at a specific distance
- * distance 1 = parent, distance 2 = grandparent, etc.
+ * Gets an ancestor window at a specific distance in the frame hierarchy.
+ *
+ * @param win - The starting window. Defaults to the current window.
+ * @param distance - The number of levels to traverse up. 1 = parent, 2 = grandparent, etc.
+ * @returns The ancestor window at the specified distance, or `null` if not found.
+ *
+ * @remarks
+ * This function traverses up the parent chain the specified number of times.
+ * Returns `null` if the chain ends before reaching the target distance.
+ *
+ * @example
+ * ```typescript
+ * // Get the grandparent window (2 levels up)
+ * const grandparent = getAncestor(window, 2);
+ *
+ * // Get the parent window (equivalent to getParent())
+ * const parent = getAncestor(window, 1);
+ * ```
+ *
+ * @public
  */
 export function getAncestor(
   win: Window = window,
@@ -143,8 +324,28 @@ export function getAncestor(
 }
 
 /**
- * Get distance to a parent window
- * Returns -1 if not a parent
+ * Calculates the distance (number of levels) from a child window to a parent window.
+ *
+ * @param child - The child window to start from.
+ * @param parent - The target parent window.
+ * @returns The number of levels between child and parent, or `-1` if the parent is not an ancestor.
+ *
+ * @remarks
+ * This function traverses up the parent chain from the child window, counting levels
+ * until it finds the target parent. Has a safety limit of 100 levels to prevent infinite loops.
+ *
+ * @example
+ * ```typescript
+ * // If iframe is nested 2 levels deep
+ * const distance = getDistanceToParent(iframe.contentWindow, window.top);
+ * console.log(distance); // 2
+ *
+ * // If not an ancestor
+ * const notFound = getDistanceToParent(windowA, windowB);
+ * console.log(notFound); // -1
+ * ```
+ *
+ * @public
  */
 export function getDistanceToParent(
   child: Window,
@@ -160,7 +361,6 @@ export function getDistanceToParent(
     current = getParent(current);
     distance++;
 
-    // Safety limit
     if (distance > 100) {
       break;
     }
@@ -170,29 +370,78 @@ export function getDistanceToParent(
 }
 
 /**
- * Focus a window
+ * Attempts to focus a window.
+ *
+ * @param win - The window to focus.
+ *
+ * @remarks
+ * This function safely attempts to focus the specified window.
+ * Focus may fail silently due to browser restrictions or cross-origin policies.
+ *
+ * @example
+ * ```typescript
+ * const popup = window.open('https://example.com');
+ * focusWindow(popup);
+ * ```
+ *
+ * @public
  */
 export function focusWindow(win: Window): void {
   try {
     win.focus();
   } catch {
-    // Ignore focus errors
+    // Focus errors are silently ignored
   }
 }
 
 /**
- * Close a window
+ * Attempts to close a window.
+ *
+ * @param win - The window to close.
+ *
+ * @remarks
+ * This function safely attempts to close the specified window.
+ * Close may fail silently due to browser restrictions (e.g., scripts can only
+ * close windows they opened).
+ *
+ * @example
+ * ```typescript
+ * const popup = window.open('https://example.com');
+ * // Later, close the popup
+ * closeWindow(popup);
+ * ```
+ *
+ * @public
  */
 export function closeWindow(win: Window): void {
   try {
     win.close();
   } catch {
-    // Ignore close errors
+    // Close errors are silently ignored
   }
 }
 
 /**
- * Get all frames in a window
+ * Gets all child frames (iframes) within a window.
+ *
+ * @param win - The window to get frames from. Defaults to the current window.
+ * @returns An array of Window objects representing the child frames.
+ *
+ * @remarks
+ * This function iterates over the window's frames collection and returns them as an array.
+ * If cross-origin access is denied, returns an empty array.
+ *
+ * @example
+ * ```typescript
+ * const childFrames = getFrames();
+ * console.log(`Found ${childFrames.length} iframes`);
+ *
+ * childFrames.forEach((frame, index) => {
+ *   console.log(`Frame ${index}:`, getDomain(frame));
+ * });
+ * ```
+ *
+ * @public
  */
 export function getFrames(win: Window = window): Window[] {
   const frames: Window[] = [];
@@ -202,7 +451,7 @@ export function getFrames(win: Window = window): Window[] {
       frames.push(win.frames[i] as Window);
     }
   } catch {
-    // Cross-origin error
+    // Cross-origin errors result in returning an empty array
   }
 
   return frames;

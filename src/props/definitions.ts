@@ -1,39 +1,83 @@
+/**
+ * @packageDocumentation
+ * Built-in prop definitions for ForgeFrame components.
+ *
+ * @remarks
+ * This module defines the standard props that are automatically available
+ * to all ForgeFrame components, including identifiers, dimensions, and
+ * lifecycle callbacks.
+ */
+
 import type { PropDefinition, Dimensions } from '../types';
 import { PROP_TYPE } from '../constants';
 
 /**
- * Built-in props that are automatically provided to all components
+ * Built-in props that are automatically provided to all components.
+ *
+ * @remarks
+ * These props are always available regardless of the component's prop definitions.
+ * They include component identifiers, dimensions, timeouts, and lifecycle callbacks.
+ *
+ * @public
  */
 export interface BuiltinProps {
-  // Component identifiers
+  /** Unique component instance identifier. */
   uid: string;
+
+  /** Component tag name. */
   tag: string;
 
-  // Dimensions
+  /** Component dimensions. */
   dimensions: Dimensions;
 
-  // Timeout for initialization
+  /** Initialization timeout in milliseconds. */
   timeout: number;
 
-  // CSP nonce for inline scripts/styles
+  /** CSP nonce for inline scripts/styles. */
   cspNonce?: string;
 
-  // Lifecycle callbacks
+  /** Called when component becomes visible. */
   onDisplay?: () => void;
+
+  /** Called when component is fully rendered. */
   onRendered?: () => void;
+
+  /** Called when rendering starts. */
   onRender?: () => void;
+
+  /** Called when prerender phase completes. */
   onPrerendered?: () => void;
+
+  /** Called when prerender phase starts. */
   onPrerender?: () => void;
+
+  /** Called when component is closing. */
   onClose?: () => void;
+
+  /** Called when component is destroyed. */
   onDestroy?: () => void;
+
+  /** Called when component is resized. */
   onResize?: (dimensions: Dimensions) => void;
+
+  /** Called when component receives focus. */
   onFocus?: () => void;
+
+  /** Called when an error occurs. */
   onError?: (err: Error) => void;
+
+  /** Called when props are updated. */
   onProps?: (props: Record<string, unknown>) => void;
 }
 
 /**
- * Default prop definitions for built-in props
+ * Default prop definitions for all built-in props.
+ *
+ * @remarks
+ * These definitions specify the type, required status, and default values
+ * for built-in props.
+ *
+ * @public
  */
 export const BUILTIN_PROP_DEFINITIONS: Record<string, PropDefinition> = {
   uid: {
@@ -137,7 +181,12 @@ export const BUILTIN_PROP_DEFINITIONS: Record<string, PropDefinition> = {
 };
 
 /**
- * Get the default value for a prop type
+ * Gets the default value for a prop type.
+ *
+ * @param type - The prop type string
+ * @returns The default value for that type
+ *
+ * @public
  */
 export function getDefaultForType(type: string): unknown {
   switch (type) {

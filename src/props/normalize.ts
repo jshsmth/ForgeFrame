@@ -1,3 +1,12 @@
+/**
+ * @packageDocumentation
+ * Props normalization and validation module.
+ *
+ * @remarks
+ * This module handles merging user props with defaults, validating prop
+ * types, and filtering props for sending to child components.
+ */
+
 import type {
   PropDefinition,
   PropsDefinition,
@@ -9,7 +18,15 @@ import { BUILTIN_PROP_DEFINITIONS } from './definitions';
 import { matchDomain } from '../window/helpers';
 
 /**
- * Merge user props with defaults and compute values
+ * Merges user props with defaults and computes derived values.
+ *
+ * @typeParam P - The props type
+ * @param userProps - Props provided by the user
+ * @param definitions - Prop definitions from component config
+ * @param context - Context for computed props
+ * @returns Normalized props object
+ *
+ * @public
  */
 export function normalizeProps<P extends Record<string, unknown>>(
   userProps: Partial<P>,
@@ -59,7 +76,14 @@ export function normalizeProps<P extends Record<string, unknown>>(
 }
 
 /**
- * Validate props against their definitions
+ * Validates props against their definitions.
+ *
+ * @typeParam P - The props type
+ * @param props - Props to validate
+ * @param definitions - Prop definitions to validate against
+ * @throws Error if a required prop is missing or type is invalid
+ *
+ * @public
  */
 export function validateProps<P extends Record<string, unknown>>(
   props: P,
@@ -97,7 +121,8 @@ export function validateProps<P extends Record<string, unknown>>(
 }
 
 /**
- * Validate a value against a prop type
+ * Validates a value against a prop type.
+ * @internal
  */
 function validateType(value: unknown, type: string): boolean {
   switch (type) {
@@ -119,7 +144,19 @@ function validateType(value: unknown, type: string): boolean {
 }
 
 /**
- * Filter props for sending to child based on definitions
+ * Filters props for sending to the child component.
+ *
+ * @remarks
+ * Respects sendToChild, sameDomain, and trustedDomains settings.
+ *
+ * @typeParam P - The props type
+ * @param props - All props
+ * @param definitions - Prop definitions
+ * @param childDomain - The child's domain
+ * @param isSameDomain - Whether child is same domain as parent
+ * @returns Filtered props for the child
+ *
+ * @public
  */
 export function getPropsForChild<P extends Record<string, unknown>>(
   props: P,
@@ -163,7 +200,14 @@ export function getPropsForChild<P extends Record<string, unknown>>(
 }
 
 /**
- * Build URL query parameters from props
+ * Builds URL query parameters from props with queryParam option.
+ *
+ * @typeParam P - The props type
+ * @param props - Props to convert
+ * @param definitions - Prop definitions
+ * @returns URLSearchParams with query parameters
+ *
+ * @public
  */
 export function propsToQueryParams<P extends Record<string, unknown>>(
   props: P,

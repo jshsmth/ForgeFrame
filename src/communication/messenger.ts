@@ -1,3 +1,12 @@
+/**
+ * @packageDocumentation
+ * Cross-domain messenger implementation.
+ *
+ * @remarks
+ * Provides a simple request/response communication layer over postMessage,
+ * replacing post-robot with a minimal implementation.
+ */
+
 import type { Message } from '../types';
 import { MESSAGE_TYPE } from '../constants';
 import { generateShortUID } from '../utils/uid';
@@ -9,26 +18,70 @@ import {
   createResponseMessage,
 } from './protocol';
 
+/**
+ * Handler function for incoming messages.
+ *
+ * @typeParam T - The expected data type of incoming messages
+ * @typeParam R - The return type of the handler
+ * @public
+ */
 export type MessageHandler<T = unknown, R = unknown> = (
   data: T,
   source: { uid: string; domain: string }
 ) => R | Promise<R>;
 
+/**
+ * Tracks a pending request awaiting response.
+ * @internal
+ */
 interface PendingRequest {
   deferred: Deferred<unknown>;
   timeout: ReturnType<typeof setTimeout>;
 }
 
 /**
- * Cross-domain messenger using postMessage
- * Replaces post-robot with a simpler implementation
+ * Cross-domain messenger using postMessage.
+ *
+ * @remarks
+ * This class provides a request/response communication layer over the
+ * browser's postMessage API. It handles message serialization, timeouts,
+ * and response correlation.
+ *
+ * @example
+ * ```typescript
+ * const messenger = new Messenger('component-123', window, window.location.origin);
+ *
+ * // Register handler
+ * messenger.on('greeting', (data) => {
+ *   return { message: `Hello, ${data.name}!` };
+ * });
+ *
+ * // Send message
+ * const response = await messenger.send(targetWindow, targetOrigin, 'greeting', { name: 'World' });
+ * ```
+ *
+ * @public
  */
 export class Messenger {
+  /** @internal */
   private pending = new Map<string, PendingRequest>();
+
+  /** @internal */
   private handlers = new Map<string, MessageHandler>();
+
+  /** @internal */
   private listener: ((event: MessageEvent) => void) | null = null;
+
+  /** @internal */
   private destroyed = false;
 
+  /**
+   * Creates a new Messenger instance.
+   *
+   * @param uid - Unique identifier for this messenger
+   * @param win - The window to listen for messages on
+   * @param domain - The origin domain of this messenger
+   */
   constructor(
     private uid: string,
     private win: Window = window,
@@ -38,7 +91,17 @@ export class Messenger {
   }
 
   /**
-   * Send a message and wait for response
+   * Sends a message and waits for a response.
+   *
+   * @typeParam T - The data type being sent
+   * @typeParam R - The expected response type
+   * @param targetWin - The target window to send to
+   * @param targetDomain - The target origin domain
+   * @param name - The message name/type
+   * @param data - Optional data payload
+   * @param timeout - Timeout in milliseconds (default: 10000)
+   * @returns Promise resolving to the response data
+   * @throws Error if messenger is destroyed or timeout occurs
    */
   async send<T = unknown, R = unknown>(
     targetWin: Window,
@@ -80,7 +143,14 @@ export class Messenger {
   }
 
   /**
-   * Send a one-way message (no response expected)
+   * Sends a one-way message without waiting for a response.
+   *
+   * @typeParam T - The data type being sent
+   * @param targetWin - The target window to send to
+   * @param targetDomain - The target origin domain
+   * @param name - The message name/type
+   * @param data - Optional data payload
+   * @throws Error if messenger is destroyed
    */
   post<T = unknown>(
     targetWin: Window,
@@ -102,8 +172,13 @@ export class Messenger {
   }
 
   /**
-   * Register a handler for incoming messages
-   * @returns Unsubscribe function
+   * Registers a handler for incoming messages of a specific type.
+   *
+   * @typeParam T - The expected data type of incoming messages
+   * @typeParam R - The return type of the handler
+   * @param name - The message name/type to handle
+   * @param handler - The handler function
+   * @returns Function to unregister the handler
    */
   on<T = unknown, R = unknown>(
     name: string,
@@ -114,11 +189,11 @@ export class Messenger {
   }
 
   /**
-   * Handle incoming postMessage events
+   * Sets up the postMessage event listener.
+   * @internal
    */
   private setupListener(): void {
     this.listener = (event: MessageEvent) => {
-      // Ignore messages from self
       if (event.source === this.win) return;
 
       const message = deserializeMessage(event.data);
@@ -131,14 +206,14 @@ export class Messenger {
   }
 
   /**
-   * Process a received message
+   * Processes a received message.
+   * @internal
    */
   private async handleMessage(
     message: Message,
     sourceWin: Window,
     origin: string
   ): Promise<void> {
-    // Handle response to a pending request
     if (message.type === MESSAGE_TYPE.RESPONSE) {
       const pending = this.pending.get(message.id);
       if (pending) {
@@ -156,11 +231,9 @@ export class Messenger {
       return;
     }
 
-    // Handle incoming request
     if (message.type === MESSAGE_TYPE.REQUEST) {
       const handler = this.handlers.get(message.name);
       if (!handler) {
-        // No handler registered, ignore
         return;
       }
 
@@ -173,7 +246,6 @@ export class Messenger {
         responseError = err instanceof Error ? err : new Error(String(err));
       }
 
-      // Send response
       const response = createResponseMessage(
         message.id,
         responseData,
@@ -184,13 +256,17 @@ export class Messenger {
       try {
         sourceWin.postMessage(serializeMessage(response), origin);
       } catch {
-        // Window might be closed, ignore
+        // Window might be closed
       }
     }
   }
 
   /**
-   * Clean up the messenger
+   * Cleans up the messenger and releases resources.
+   *
+   * @remarks
+   * Removes the message listener, rejects all pending requests,
+   * and clears all handlers.
    */
   destroy(): void {
     if (this.destroyed) return;
@@ -201,7 +277,6 @@ export class Messenger {
       this.listener = null;
     }
 
-    // Reject all pending requests
     for (const pending of this.pending.values()) {
       clearTimeout(pending.timeout);
       pending.deferred.reject(new Error('Messenger destroyed'));
@@ -211,7 +286,9 @@ export class Messenger {
   }
 
   /**
-   * Check if messenger has been destroyed
+   * Checks if the messenger has been destroyed.
+   *
+   * @returns True if destroy() has been called
    */
   isDestroyed(): boolean {
     return this.destroyed;
