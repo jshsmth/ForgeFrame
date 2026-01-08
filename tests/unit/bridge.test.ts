@@ -1,0 +1,375 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  FunctionBridge,
+  serializeFunctions,
+  deserializeFunctions,
+} from '../../src/communication/bridge';
+import { Messenger } from '../../src/communication/messenger';
+import { MESSAGE_NAME } from '../../src/constants';
+
+// Mock messenger
+const createMockMessenger = () => {
+  const handlers = new Map<string, Function>();
+
+  return {
+    send: vi.fn().mockResolvedValue(undefined),
+    post: vi.fn(),
+    on: vi.fn((name: string, handler: Function) => {
+      handlers.set(name, handler);
+      return () => handlers.delete(name);
+    }),
+    destroy: vi.fn(),
+    isDestroyed: vi.fn().mockReturnValue(false),
+    handlers,
+    // Helper to simulate incoming call
+    simulateCall: async (id: string, args: unknown[]) => {
+      const handler = handlers.get(MESSAGE_NAME.CALL);
+      if (handler) {
+        return handler({ id, args }, { uid: 'test', domain: 'https://test.com' });
+      }
+      throw new Error('No handler registered');
+    },
+  } as unknown as Messenger & { handlers: Map<string, Function>; simulateCall: (id: string, args: unknown[]) => Promise<unknown> };
+};
+
+describe('FunctionBridge', () => {
+  let messenger: ReturnType<typeof createMockMessenger>;
+  let bridge: FunctionBridge;
+
+  beforeEach(() => {
+    messenger = createMockMessenger();
+    bridge = new FunctionBridge(messenger);
+  });
+
+  afterEach(() => {
+    bridge.destroy();
+  });
+
+  describe('serialize', () => {
+    it('should create function reference', () => {
+      const fn = () => 'hello';
+      const ref = bridge.serialize(fn);
+
+      expect(ref.__type__).toBe('function');
+      expect(typeof ref.__id__).toBe('string');
+      expect(ref.__name__).toBe('fn');
+    });
+
+    it('should use function name', () => {
+      function namedFunction() {
+        return 42;
+      }
+
+      const ref = bridge.serialize(namedFunction);
+
+      expect(ref.__name__).toBe('namedFunction');
+    });
+
+    it('should use custom name when provided', () => {
+      const ref = bridge.serialize(() => {}, 'customName');
+
+      expect(ref.__name__).toBe('customName');
+    });
+
+    it('should use "anonymous" for unnamed functions', () => {
+      const ref = bridge.serialize(() => {});
+
+      expect(ref.__name__).toBe('anonymous');
+    });
+
+    it('should generate unique IDs', () => {
+      const ref1 = bridge.serialize(() => {});
+      const ref2 = bridge.serialize(() => {});
+
+      expect(ref1.__id__).not.toBe(ref2.__id__);
+    });
+  });
+
+  describe('deserialize', () => {
+    it('should create callable wrapper', () => {
+      const targetWin = {} as Window;
+      const ref = { __type__: 'function' as const, __id__: 'fn-123', __name__: 'test' };
+
+      const wrapper = bridge.deserialize(ref, targetWin, 'https://target.com');
+
+      expect(typeof wrapper).toBe('function');
+    });
+
+    it('should send call message when invoked', async () => {
+      const targetWin = {} as Window;
+      const ref = { __type__: 'function' as const, __id__: 'fn-123', __name__: 'test' };
+
+      const wrapper = bridge.deserialize(ref, targetWin, 'https://target.com') as (...args: unknown[]) => Promise<unknown>;
+
+      await wrapper('arg1', 'arg2');
+
+      expect(messenger.send).toHaveBeenCalledWith(
+        targetWin,
+        'https://target.com',
+        MESSAGE_NAME.CALL,
+        { id: 'fn-123', args: ['arg1', 'arg2'] }
+      );
+    });
+
+    it('should cache deserialized functions', () => {
+      const targetWin = {} as Window;
+      const ref = { __type__: 'function' as const, __id__: 'fn-123', __name__: 'test' };
+
+      const wrapper1 = bridge.deserialize(ref, targetWin, 'https://target.com');
+      const wrapper2 = bridge.deserialize(ref, targetWin, 'https://target.com');
+
+      expect(wrapper1).toBe(wrapper2);
+    });
+
+    it('should set function name', () => {
+      const targetWin = {} as Window;
+      const ref = { __type__: 'function' as const, __id__: 'fn-123', __name__: 'myFunction' };
+
+      const wrapper = bridge.deserialize(ref, targetWin, 'https://target.com');
+
+      expect(wrapper.name).toBe('myFunction');
+    });
+  });
+
+  describe('isFunctionRef', () => {
+    it('should return true for valid function ref', () => {
+      expect(FunctionBridge.isFunctionRef({
+        __type__: 'function',
+        __id__: 'fn-123',
+        __name__: 'test',
+      })).toBe(true);
+    });
+
+    it('should return false for invalid objects', () => {
+      expect(FunctionBridge.isFunctionRef(null)).toBe(false);
+      expect(FunctionBridge.isFunctionRef(undefined)).toBe(false);
+      expect(FunctionBridge.isFunctionRef('string')).toBe(false);
+      expect(FunctionBridge.isFunctionRef({ __type__: 'other' })).toBe(false);
+      expect(FunctionBridge.isFunctionRef({ __type__: 'function' })).toBe(false);
+      expect(FunctionBridge.isFunctionRef({ __id__: 'test' })).toBe(false);
+    });
+  });
+
+  describe('call handler', () => {
+    it('should setup call handler on construction', () => {
+      expect(messenger.on).toHaveBeenCalledWith(
+        MESSAGE_NAME.CALL,
+        expect.any(Function)
+      );
+    });
+
+    it('should invoke local function when called', async () => {
+      const localFn = vi.fn().mockReturnValue('result');
+      const ref = bridge.serialize(localFn);
+
+      const result = await messenger.simulateCall(ref.__id__, ['arg1', 'arg2']);
+
+      expect(localFn).toHaveBeenCalledWith('arg1', 'arg2');
+      expect(result).toBe('result');
+    });
+
+    it('should throw for unknown function ID', async () => {
+      await expect(messenger.simulateCall('unknown-id', [])).rejects.toThrow(
+        'Function with id "unknown-id" not found'
+      );
+    });
+  });
+
+  describe('removeLocal', () => {
+    it('should remove local function reference', async () => {
+      const localFn = vi.fn();
+      const ref = bridge.serialize(localFn);
+
+      bridge.removeLocal(ref.__id__);
+
+      await expect(messenger.simulateCall(ref.__id__, [])).rejects.toThrow(
+        `Function with id "${ref.__id__}" not found`
+      );
+    });
+  });
+
+  describe('destroy', () => {
+    it('should clear all function references', async () => {
+      const localFn = vi.fn();
+      const ref = bridge.serialize(localFn);
+
+      bridge.destroy();
+
+      await expect(messenger.simulateCall(ref.__id__, [])).rejects.toThrow();
+    });
+  });
+});
+
+describe('serializeFunctions', () => {
+  let messenger: ReturnType<typeof createMockMessenger>;
+  let bridge: FunctionBridge;
+
+  beforeEach(() => {
+    messenger = createMockMessenger();
+    bridge = new FunctionBridge(messenger);
+  });
+
+  afterEach(() => {
+    bridge.destroy();
+  });
+
+  it('should serialize top-level function', () => {
+    const fn = () => 'hello';
+    const result = serializeFunctions(fn, bridge);
+
+    expect(FunctionBridge.isFunctionRef(result)).toBe(true);
+  });
+
+  it('should serialize functions in object', () => {
+    const obj = {
+      callback: () => 'callback',
+      value: 42,
+    };
+
+    const result = serializeFunctions(obj, bridge) as Record<string, unknown>;
+
+    expect(FunctionBridge.isFunctionRef(result.callback)).toBe(true);
+    expect(result.value).toBe(42);
+  });
+
+  it('should serialize functions in nested object', () => {
+    const obj = {
+      nested: {
+        deep: {
+          fn: () => 'deep',
+        },
+      },
+    };
+
+    const result = serializeFunctions(obj, bridge) as { nested: { deep: { fn: unknown } } };
+
+    expect(FunctionBridge.isFunctionRef(result.nested.deep.fn)).toBe(true);
+  });
+
+  it('should serialize functions in array', () => {
+    const arr = [() => 'first', 'string', () => 'second'];
+
+    const result = serializeFunctions(arr, bridge) as unknown[];
+
+    expect(FunctionBridge.isFunctionRef(result[0])).toBe(true);
+    expect(result[1]).toBe('string');
+    expect(FunctionBridge.isFunctionRef(result[2])).toBe(true);
+  });
+
+  it('should preserve primitives', () => {
+    expect(serializeFunctions('string', bridge)).toBe('string');
+    expect(serializeFunctions(42, bridge)).toBe(42);
+    expect(serializeFunctions(true, bridge)).toBe(true);
+    expect(serializeFunctions(null, bridge)).toBe(null);
+  });
+});
+
+describe('deserializeFunctions', () => {
+  let messenger: ReturnType<typeof createMockMessenger>;
+  let bridge: FunctionBridge;
+  const targetWin = {} as Window;
+  const targetDomain = 'https://target.com';
+
+  beforeEach(() => {
+    messenger = createMockMessenger();
+    bridge = new FunctionBridge(messenger);
+  });
+
+  afterEach(() => {
+    bridge.destroy();
+  });
+
+  it('should deserialize function reference', () => {
+    const ref = { __type__: 'function' as const, __id__: 'fn-1', __name__: 'test' };
+
+    const result = deserializeFunctions(ref, bridge, targetWin, targetDomain);
+
+    expect(typeof result).toBe('function');
+  });
+
+  it('should deserialize functions in object', () => {
+    const obj = {
+      callback: { __type__: 'function' as const, __id__: 'fn-1', __name__: 'callback' },
+      value: 42,
+    };
+
+    const result = deserializeFunctions(obj, bridge, targetWin, targetDomain) as Record<string, unknown>;
+
+    expect(typeof result.callback).toBe('function');
+    expect(result.value).toBe(42);
+  });
+
+  it('should deserialize functions in nested object', () => {
+    const obj = {
+      nested: {
+        fn: { __type__: 'function' as const, __id__: 'fn-1', __name__: 'nested' },
+      },
+    };
+
+    const result = deserializeFunctions(obj, bridge, targetWin, targetDomain) as { nested: { fn: unknown } };
+
+    expect(typeof result.nested.fn).toBe('function');
+  });
+
+  it('should deserialize functions in array', () => {
+    const arr = [
+      { __type__: 'function' as const, __id__: 'fn-1', __name__: 'first' },
+      'string',
+    ];
+
+    const result = deserializeFunctions(arr, bridge, targetWin, targetDomain) as unknown[];
+
+    expect(typeof result[0]).toBe('function');
+    expect(result[1]).toBe('string');
+  });
+
+  it('should preserve primitives', () => {
+    expect(deserializeFunctions('string', bridge, targetWin, targetDomain)).toBe('string');
+    expect(deserializeFunctions(42, bridge, targetWin, targetDomain)).toBe(42);
+    expect(deserializeFunctions(true, bridge, targetWin, targetDomain)).toBe(true);
+    expect(deserializeFunctions(null, bridge, targetWin, targetDomain)).toBe(null);
+  });
+});
+
+describe('round-trip serialization', () => {
+  it('should preserve function calls through serialize/deserialize', async () => {
+    const parentMessenger = createMockMessenger();
+    const childMessenger = createMockMessenger();
+
+    const parentBridge = new FunctionBridge(parentMessenger);
+    const childBridge = new FunctionBridge(childMessenger);
+
+    const targetWin = {} as Window;
+    const targetDomain = 'https://child.com';
+
+    // Parent serializes a function
+    const originalFn = vi.fn().mockReturnValue('success');
+    const serialized = parentBridge.serialize(originalFn, 'myCallback');
+
+    // Child deserializes it
+    const deserialized = childBridge.deserialize(
+      serialized,
+      targetWin,
+      targetDomain
+    ) as (...args: unknown[]) => Promise<unknown>;
+
+    // Child calls the function
+    await deserialized('arg1');
+
+    // Verify the call was sent to parent
+    expect(childMessenger.send).toHaveBeenCalledWith(
+      targetWin,
+      targetDomain,
+      MESSAGE_NAME.CALL,
+      { id: serialized.__id__, args: ['arg1'] }
+    );
+
+    // Simulate the parent receiving and handling the call
+    const result = await parentMessenger.simulateCall(serialized.__id__, ['arg1']);
+    expect(result).toBe('success');
+    expect(originalFn).toHaveBeenCalledWith('arg1');
+
+    parentBridge.destroy();
+    childBridge.destroy();
+  });
+});
