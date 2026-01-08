@@ -1,0 +1,208 @@
+import type {
+  PropDefinition,
+  PropsDefinition,
+  PropContext,
+  DomainMatcher,
+} from '../types';
+import { PROP_TYPE } from '../constants';
+import { BUILTIN_PROP_DEFINITIONS } from './definitions';
+import { matchDomain } from '../window/helpers';
+
+/**
+ * Merge user props with defaults and compute values
+ */
+export function normalizeProps<P extends Record<string, unknown>>(
+  userProps: Partial<P>,
+  definitions: PropsDefinition<P>,
+  context: PropContext<P>
+): P {
+  const allDefs = {
+    ...BUILTIN_PROP_DEFINITIONS,
+    ...definitions,
+  } as PropsDefinition<P>;
+
+  const result = {} as P;
+
+  for (const [key, def] of Object.entries(allDefs)) {
+    const definition = def as PropDefinition<unknown, P>;
+    let value: unknown;
+
+    // Check for alias
+    const aliasKey = definition.alias;
+    const hasValue = key in userProps;
+    const hasAliasValue = aliasKey && aliasKey in userProps;
+
+    if (hasValue) {
+      value = userProps[key as keyof P];
+    } else if (hasAliasValue) {
+      value = userProps[aliasKey as keyof P];
+    } else if (definition.value) {
+      // Computed value
+      value = definition.value(context);
+    } else if (definition.default !== undefined) {
+      // Default value
+      value =
+        typeof definition.default === 'function'
+          ? (definition.default as (ctx: PropContext<P>) => unknown)(context)
+          : definition.default;
+    }
+
+    // Apply decorator if present
+    if (value !== undefined && definition.decorate) {
+      value = definition.decorate({ value, props: result as P });
+    }
+
+    (result as Record<string, unknown>)[key] = value;
+  }
+
+  return result;
+}
+
+/**
+ * Validate props against their definitions
+ */
+export function validateProps<P extends Record<string, unknown>>(
+  props: P,
+  definitions: PropsDefinition<P>
+): void {
+  const allDefs = {
+    ...BUILTIN_PROP_DEFINITIONS,
+    ...definitions,
+  } as PropsDefinition<P>;
+
+  for (const [key, def] of Object.entries(allDefs)) {
+    const definition = def as PropDefinition<unknown, P>;
+    const value = props[key as keyof P];
+
+    // Check required
+    if (definition.required && value === undefined) {
+      throw new Error(`Prop "${key}" is required but was not provided`);
+    }
+
+    // Skip validation if undefined and not required
+    if (value === undefined) continue;
+
+    // Type validation
+    if (!validateType(value, definition.type)) {
+      throw new Error(
+        `Prop "${key}" expected type "${definition.type}" but got "${typeof value}"`
+      );
+    }
+
+    // Custom validation
+    if (definition.validate) {
+      definition.validate({ value, props });
+    }
+  }
+}
+
+/**
+ * Validate a value against a prop type
+ */
+function validateType(value: unknown, type: string): boolean {
+  switch (type) {
+    case PROP_TYPE.STRING:
+      return typeof value === 'string';
+    case PROP_TYPE.NUMBER:
+      return typeof value === 'number';
+    case PROP_TYPE.BOOLEAN:
+      return typeof value === 'boolean';
+    case PROP_TYPE.FUNCTION:
+      return typeof value === 'function';
+    case PROP_TYPE.ARRAY:
+      return Array.isArray(value);
+    case PROP_TYPE.OBJECT:
+      return typeof value === 'object' && value !== null && !Array.isArray(value);
+    default:
+      return true;
+  }
+}
+
+/**
+ * Filter props for sending to child based on definitions
+ */
+export function getPropsForChild<P extends Record<string, unknown>>(
+  props: P,
+  definitions: PropsDefinition<P>,
+  childDomain: string,
+  isSameDomain: boolean
+): Partial<P> {
+  const allDefs = {
+    ...BUILTIN_PROP_DEFINITIONS,
+    ...definitions,
+  } as PropsDefinition<P>;
+
+  const result: Partial<P> = {};
+
+  for (const [key, def] of Object.entries(allDefs)) {
+    const definition = def as PropDefinition<unknown, P>;
+    const value = props[key as keyof P];
+
+    // Skip if explicitly not sent to child
+    if (definition.sendToChild === false) continue;
+
+    // Skip if same domain only and not same domain
+    if (definition.sameDomain && !isSameDomain) continue;
+
+    // Skip if trusted domains don't match
+    if (definition.trustedDomains) {
+      const trusted = definition.trustedDomains as DomainMatcher;
+      if (!matchDomain(trusted, childDomain)) continue;
+    }
+
+    // Apply child decoration if present
+    let finalValue = value;
+    if (definition.childDecorate && value !== undefined) {
+      finalValue = definition.childDecorate({ value, props }) as P[keyof P];
+    }
+
+    (result as Record<string, unknown>)[key] = finalValue;
+  }
+
+  return result;
+}
+
+/**
+ * Build URL query parameters from props
+ */
+export function propsToQueryParams<P extends Record<string, unknown>>(
+  props: P,
+  definitions: PropsDefinition<P>
+): URLSearchParams {
+  const params = new URLSearchParams();
+  const allDefs = {
+    ...BUILTIN_PROP_DEFINITIONS,
+    ...definitions,
+  } as PropsDefinition<P>;
+
+  for (const [key, def] of Object.entries(allDefs)) {
+    const definition = def as PropDefinition<unknown, P>;
+    const value = props[key as keyof P];
+
+    if (value === undefined) continue;
+
+    // Skip functions - they can't be query params
+    if (definition.type === PROP_TYPE.FUNCTION) continue;
+
+    // Check if this prop should be a query param
+    if (!definition.queryParam) continue;
+
+    // Get param name (could be custom)
+    const paramName =
+      typeof definition.queryParam === 'string' ? definition.queryParam : key;
+
+    // Get param value
+    let paramValue: string;
+    if (typeof definition.queryParam === 'function') {
+      paramValue = definition.queryParam({ value });
+    } else if (typeof value === 'object') {
+      paramValue = JSON.stringify(value);
+    } else {
+      paramValue = String(value);
+    }
+
+    params.set(paramName, paramValue);
+  }
+
+  return params;
+}

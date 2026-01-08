@@ -1,0 +1,50 @@
+{
+  "name": "forgeframe",
+  "version": "1.0.0",
+  "description": "Modern cross-domain iframe component framework - a TypeScript alternative to zoid",
+  "type": "module",
+  "main": "./dist/forgeframe.cjs",
+  "module": "./dist/forgeframe.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/forgeframe.js",
+      "require": "./dist/forgeframe.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --emitDeclarationOnly && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "iframe",
+    "cross-domain",
+    "component",
+    "zoid",
+    "postmessage",
+    "popup",
+    "embed"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.1.0",
+    "jsdom": "^27.4.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vitest": "^3.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  }
+}
