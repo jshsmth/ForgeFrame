@@ -1,4 +1,5 @@
 import type { Dimensions } from '../types';
+import { normalizeDimensionToNumber } from '../utils/dimension';
 
 /**
  * Configuration options for opening a popup window.
@@ -102,8 +103,8 @@ export class PopupOpenError extends Error {
 export function openPopup(options: PopupOptions): Window {
   const { url, name, dimensions } = options;
 
-  const width = normalizeDimensionForPopup(dimensions.width, 500);
-  const height = normalizeDimensionForPopup(dimensions.height, 500);
+  const width = normalizeDimensionToNumber(dimensions.width, 500);
+  const height = normalizeDimensionToNumber(dimensions.height, 500);
 
   const left = Math.floor(window.screenX + (window.outerWidth - width) / 2);
   const top = Math.floor(window.screenY + (window.outerHeight - height) / 2);
@@ -155,7 +156,7 @@ export function closePopup(win: Window): void {
       win.close();
     }
   } catch {
-    // Ignore errors
+    // Close may fail cross-origin
   }
 }
 
@@ -185,7 +186,7 @@ export function focusPopup(win: Window): void {
       win.focus();
     }
   } catch {
-    // Ignore errors
+    // Focus may fail cross-origin
   }
 }
 
@@ -231,16 +232,16 @@ export function isPopupBlocked(win: Window | null): boolean {
  * Watches a popup window and invokes a callback when it closes.
  *
  * @remarks
- * This function polls the popup window's `closed` property at a specified
- * interval to detect when the popup has been closed. The callback is invoked
- * once when the popup closes, and polling stops automatically.
+ * This function polls the popup window's `closed` property using exponential
+ * backoff - starting with fast checks and slowing down over time. This approach
+ * catches quick closes immediately while reducing CPU usage for long-running popups.
  *
  * If the window becomes inaccessible (e.g., due to navigation to a different
  * origin), the callback is also invoked and polling stops.
  *
  * @param win - The popup Window object to watch
  * @param callback - Function to call when the popup closes
- * @param interval - Polling interval in milliseconds (default: 500)
+ * @param options - Optional configuration for polling intervals
  * @returns A cleanup function that stops watching when called
  *
  * @example
@@ -261,22 +262,51 @@ export function isPopupBlocked(win: Window | null): boolean {
 export function watchPopupClose(
   win: Window,
   callback: () => void,
-  interval = 500
+  options: { initialInterval?: number; maxInterval?: number; multiplier?: number } = {}
 ): () => void {
-  const timer = setInterval(() => {
+  const {
+    initialInterval = 100,  // Start fast to catch quick closes
+    maxInterval = 2000,     // Cap at 2 seconds
+    multiplier = 1.5,       // Exponential backoff multiplier
+  } = options;
+
+  let currentInterval = initialInterval;
+  let timer: ReturnType<typeof setTimeout>;
+  let stopped = false;
+
+  const invokeCallback = (): void => {
+    try {
+      callback();
+    } catch (err) {
+      console.error('Error in popup close callback:', err);
+    }
+  };
+
+  const check = (): void => {
+    if (stopped) return;
+
     try {
       if (win.closed) {
-        clearInterval(timer);
-        callback();
+        invokeCallback();
+        return;
       }
     } catch {
-      // Window might be inaccessible
-      clearInterval(timer);
-      callback();
+      // Window might be inaccessible (cross-origin navigation)
+      invokeCallback();
+      return;
     }
-  }, interval);
 
-  return () => clearInterval(timer);
+    // Schedule next check with exponential backoff
+    currentInterval = Math.min(currentInterval * multiplier, maxInterval);
+    timer = setTimeout(check, currentInterval);
+  };
+
+  timer = setTimeout(check, currentInterval);
+
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+  };
 }
 
 /**
@@ -301,8 +331,8 @@ export function watchPopupClose(
  */
 export function resizePopup(win: Window, dimensions: Dimensions): void {
   try {
-    const width = normalizeDimensionForPopup(dimensions.width, win.outerWidth);
-    const height = normalizeDimensionForPopup(
+    const width = normalizeDimensionToNumber(dimensions.width, win.outerWidth);
+    const height = normalizeDimensionToNumber(
       dimensions.height,
       win.outerHeight
     );
@@ -312,29 +342,3 @@ export function resizePopup(win: Window, dimensions: Dimensions): void {
   }
 }
 
-/**
- * Normalizes a dimension value to a number for popup window APIs.
- *
- * @remarks
- * Popup window APIs like `window.open()` and `window.resizeTo()` require
- * numeric pixel values. This function converts various dimension formats:
- * - Numbers are returned as-is
- * - Strings are parsed as integers (e.g., `'500px'` becomes `500`)
- * - Undefined values or unparseable strings return the fallback
- *
- * @param value - The dimension value to normalize
- * @param fallback - The fallback value to use if normalization fails
- * @returns A numeric pixel value
- *
- * @internal
- */
-function normalizeDimensionForPopup(
-  value: string | number | undefined,
-  fallback: number
-): number {
-  if (value === undefined) return fallback;
-  if (typeof value === 'number') return value;
-
-  const parsed = parseInt(value, 10);
-  return isNaN(parsed) ? fallback : parsed;
-}

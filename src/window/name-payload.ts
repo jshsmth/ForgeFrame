@@ -3,6 +3,13 @@ import type { ContextType } from '../constants';
 import { WINDOW_NAME_PREFIX, VERSION } from '../constants';
 
 /**
+ * Maximum allowed size for the window.name payload in bytes.
+ * Set to 32KB which is safe across all browsers while allowing reasonable payload sizes.
+ * @internal
+ */
+const MAX_PAYLOAD_SIZE = 32 * 1024;
+
+/**
  * Builds a window name string with an encoded payload.
  *
  * @typeParam P - The type of the props included in the payload.
@@ -134,19 +141,36 @@ export function isChildOfComponent(
  * @typeParam P - The type of the props in the payload.
  * @param payload - The payload to encode.
  * @returns A base64-encoded string representing the payload.
- * @throws Error if JSON serialization or encoding fails.
+ * @throws Error if JSON serialization or encoding fails, or if payload exceeds size limit.
  *
  * @remarks
  * The payload is first JSON-serialized, then URI-encoded (to handle Unicode),
  * and finally base64-encoded. This ensures the result is safe for window.name.
+ *
+ * The function validates that the encoded payload doesn't exceed the maximum
+ * allowed size (32KB) to prevent browser issues with large window.name values.
  *
  * @internal
  */
 function encodePayload<P>(payload: WindowNamePayload<P>): string {
   try {
     const json = JSON.stringify(payload);
-    return btoa(encodeURIComponent(json));
+    const encoded = btoa(encodeURIComponent(json));
+
+    // Validate payload size to prevent browser issues
+    const byteSize = new Blob([encoded]).size;
+    if (byteSize > MAX_PAYLOAD_SIZE) {
+      throw new Error(
+        `Payload size (${Math.round(byteSize / 1024)}KB) exceeds maximum allowed size (${MAX_PAYLOAD_SIZE / 1024}KB). ` +
+        `Consider reducing the amount of data passed via props.`
+      );
+    }
+
+    return encoded;
   } catch (err) {
+    if (err instanceof Error && err.message.includes('Payload size')) {
+      throw err;
+    }
     throw new Error(`Failed to encode payload: ${err}`);
   }
 }

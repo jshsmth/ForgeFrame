@@ -1,4 +1,5 @@
 import type { Dimensions, IframeAttributes, IframeStyles } from '../types';
+import { normalizeDimensionToCSS } from '../utils/dimension';
 
 /**
  * Configuration options for creating an iframe.
@@ -79,7 +80,6 @@ export function createIframe(options: IframeOptions): HTMLIFrameElement {
 
   applyDimensions(iframe, dimensions);
 
-  // Apply HTML attributes
   for (const [key, value] of Object.entries(attributes)) {
     if (value === undefined) continue;
 
@@ -92,7 +92,6 @@ export function createIframe(options: IframeOptions): HTMLIFrameElement {
     }
   }
 
-  // Apply CSS styles
   applyStyles(iframe, style);
 
   // Default sandbox if not specified (security)
@@ -300,10 +299,10 @@ function applyDimensions(
   dimensions: Dimensions
 ): void {
   if (dimensions.width !== undefined) {
-    iframe.style.width = normalizeDimension(dimensions.width);
+    iframe.style.width = normalizeDimensionToCSS(dimensions.width);
   }
   if (dimensions.height !== undefined) {
-    iframe.style.height = normalizeDimension(dimensions.height);
+    iframe.style.height = normalizeDimensionToCSS(dimensions.height);
   }
 }
 
@@ -336,24 +335,6 @@ function applyStyles(
   }
 }
 
-/**
- * Normalizes a dimension value to a CSS-compatible string.
- *
- * @remarks
- * Numeric values are converted to pixel strings (e.g., `400` becomes `'400px'`).
- * String values are returned as-is, allowing for units like `'100%'` or `'auto'`.
- *
- * @param value - The dimension value (number for pixels, or string with units)
- * @returns A CSS-compatible dimension string
- *
- * @internal
- */
-function normalizeDimension(value: string | number): string {
-  if (typeof value === 'number') {
-    return `${value}px`;
-  }
-  return value;
-}
 
 /**
  * Retrieves the content dimensions from an iframe for auto-resize functionality.

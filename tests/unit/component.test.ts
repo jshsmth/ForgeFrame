@@ -1,5 +1,14 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { create, clearComponents } from '../../src/core/component';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import {
+  create,
+  clearComponents,
+  getComponent,
+  destroy,
+  destroyComponents,
+  destroyAll,
+  unregisterComponent,
+} from '../../src/core/component';
+import { isChild, getXProps } from '../../src/core/child';
 import { PROP_TYPE, CONTEXT } from '../../src/constants';
 
 describe('Component Creation', () => {
@@ -146,5 +155,300 @@ describe('Component Instance', () => {
 
     expect(cloned).toBeDefined();
     expect(cloned).not.toBe(instance);
+  });
+});
+
+describe('Component Registry', () => {
+  afterEach(() => {
+    clearComponents();
+  });
+
+  describe('getComponent', () => {
+    it('should retrieve a registered component by tag', () => {
+      const MyComponent = create({
+        tag: 'retrievable-component',
+        url: 'https://example.com',
+      });
+
+      const retrieved = getComponent('retrievable-component');
+
+      expect(retrieved).toBe(MyComponent);
+    });
+
+    it('should return undefined for non-existent tag', () => {
+      const retrieved = getComponent('non-existent');
+
+      expect(retrieved).toBeUndefined();
+    });
+
+    it('should work with typed components', () => {
+      interface MyProps {
+        name: string;
+      }
+
+      create<MyProps>({
+        tag: 'typed-component',
+        url: 'https://example.com',
+        props: {
+          name: { type: PROP_TYPE.STRING },
+        },
+      });
+
+      const retrieved = getComponent<MyProps>('typed-component');
+
+      expect(retrieved).toBeDefined();
+    });
+  });
+
+  describe('unregisterComponent', () => {
+    it('should remove a component from the registry', () => {
+      create({
+        tag: 'to-unregister',
+        url: 'https://example.com',
+      });
+
+      expect(getComponent('to-unregister')).toBeDefined();
+
+      unregisterComponent('to-unregister');
+
+      expect(getComponent('to-unregister')).toBeUndefined();
+    });
+
+    it('should not throw when unregistering non-existent component', () => {
+      expect(() => unregisterComponent('does-not-exist')).not.toThrow();
+    });
+
+    it('should allow re-registering a component after unregistration', () => {
+      create({
+        tag: 're-register-test',
+        url: 'https://example.com/first',
+      });
+
+      unregisterComponent('re-register-test');
+
+      // Should not throw - can register again
+      const NewComponent = create({
+        tag: 're-register-test',
+        url: 'https://example.com/second',
+      });
+
+      expect(NewComponent).toBeDefined();
+    });
+  });
+});
+
+describe('Component Destruction', () => {
+  afterEach(() => {
+    clearComponents();
+  });
+
+  describe('destroy', () => {
+    it('should call close on the instance', async () => {
+      const MyComponent = create({
+        tag: 'destroy-single',
+        url: 'https://example.com',
+      });
+
+      const instance = MyComponent({});
+      const closeSpy = vi.spyOn(instance, 'close');
+
+      await destroy(instance);
+
+      expect(closeSpy).toHaveBeenCalled();
+    });
+
+    it('should emit close event when calling close', async () => {
+      const MyComponent = create({
+        tag: 'destroy-event-test',
+        url: 'https://example.com',
+      });
+
+      const instance = MyComponent({});
+      const closeHandler = vi.fn();
+      instance.event.on('close', closeHandler);
+
+      await instance.close();
+
+      expect(closeHandler).toHaveBeenCalled();
+    });
+
+    it('should remove instance from instances array on destroy event', () => {
+      const MyComponent = create({
+        tag: 'destroy-removal-test',
+        url: 'https://example.com',
+      });
+
+      const instance = MyComponent({});
+      expect(MyComponent.instances.length).toBe(1);
+
+      // Manually emit destroy event to test the listener
+      instance.event.emit('destroy');
+
+      expect(MyComponent.instances.length).toBe(0);
+    });
+  });
+
+  describe('destroyComponents', () => {
+    it('should call close on all instances of a specific component', async () => {
+      const MyComponent = create({
+        tag: 'destroy-all-of-type',
+        url: 'https://example.com',
+      });
+
+      const instance1 = MyComponent({});
+      const instance2 = MyComponent({});
+      const instance3 = MyComponent({});
+
+      const spy1 = vi.spyOn(instance1, 'close');
+      const spy2 = vi.spyOn(instance2, 'close');
+      const spy3 = vi.spyOn(instance3, 'close');
+
+      expect(MyComponent.instances.length).toBe(3);
+
+      await destroyComponents('destroy-all-of-type');
+
+      expect(spy1).toHaveBeenCalled();
+      expect(spy2).toHaveBeenCalled();
+      expect(spy3).toHaveBeenCalled();
+    });
+
+    it('should not affect other components', async () => {
+      const ComponentA = create({
+        tag: 'component-a',
+        url: 'https://example.com/a',
+      });
+
+      const ComponentB = create({
+        tag: 'component-b',
+        url: 'https://example.com/b',
+      });
+
+      const instanceA1 = ComponentA({});
+      const instanceA2 = ComponentA({});
+      const instanceB = ComponentB({});
+
+      const spyA1 = vi.spyOn(instanceA1, 'close');
+      const spyA2 = vi.spyOn(instanceA2, 'close');
+      const spyB = vi.spyOn(instanceB, 'close');
+
+      await destroyComponents('component-a');
+
+      expect(spyA1).toHaveBeenCalled();
+      expect(spyA2).toHaveBeenCalled();
+      expect(spyB).not.toHaveBeenCalled();
+    });
+
+    it('should not throw for non-existent component tag', async () => {
+      await expect(destroyComponents('non-existent')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('destroyAll', () => {
+    it('should call close on all instances of all components', async () => {
+      const ComponentA = create({
+        tag: 'global-destroy-a',
+        url: 'https://example.com/a',
+      });
+
+      const ComponentB = create({
+        tag: 'global-destroy-b',
+        url: 'https://example.com/b',
+      });
+
+      const instanceA1 = ComponentA({});
+      const instanceA2 = ComponentA({});
+      const instanceB1 = ComponentB({});
+      const instanceB2 = ComponentB({});
+
+      const spyA1 = vi.spyOn(instanceA1, 'close');
+      const spyA2 = vi.spyOn(instanceA2, 'close');
+      const spyB1 = vi.spyOn(instanceB1, 'close');
+      const spyB2 = vi.spyOn(instanceB2, 'close');
+
+      await destroyAll();
+
+      expect(spyA1).toHaveBeenCalled();
+      expect(spyA2).toHaveBeenCalled();
+      expect(spyB1).toHaveBeenCalled();
+      expect(spyB2).toHaveBeenCalled();
+    });
+
+    it('should work when no components exist', async () => {
+      await expect(destroyAll()).resolves.toBeUndefined();
+    });
+  });
+});
+
+describe('Child Context Detection', () => {
+  afterEach(() => {
+    clearComponents();
+  });
+
+  describe('isChild', () => {
+    it('should return false when not in a ForgeFrame child window', () => {
+      // In normal test environment, we're not in a child window
+      expect(isChild()).toBe(false);
+    });
+  });
+
+  describe('getXProps', () => {
+    it('should return undefined when not in a child context', () => {
+      const xprops = getXProps();
+      expect(xprops).toBeUndefined();
+    });
+
+    it('should return xprops from window when available', () => {
+      // Temporarily set xprops on window
+      const mockXProps = {
+        uid: 'test-uid',
+        tag: 'test-tag',
+        testProp: 'value',
+        close: vi.fn(),
+        focus: vi.fn(),
+        resize: vi.fn(),
+        show: vi.fn(),
+        hide: vi.fn(),
+        onProps: vi.fn(),
+        onError: vi.fn(),
+        getParent: vi.fn(),
+        getParentDomain: vi.fn(),
+        export: vi.fn(),
+        parent: { props: {}, export: vi.fn() },
+        getSiblings: vi.fn(),
+      };
+
+      (window as unknown as { xprops: typeof mockXProps }).xprops = mockXProps;
+
+      const xprops = getXProps();
+      expect(xprops).toBe(mockXProps);
+
+      // Cleanup
+      delete (window as unknown as { xprops?: typeof mockXProps }).xprops;
+    });
+  });
+
+  describe('Component.isChild', () => {
+    it('should return false when not in component child context', () => {
+      const MyComponent = create({
+        tag: 'child-check-component',
+        url: 'https://example.com',
+      });
+
+      expect(MyComponent.isChild()).toBe(false);
+    });
+  });
+
+  describe('Component.canRenderTo', () => {
+    it('should return true for same-domain window', async () => {
+      const MyComponent = create({
+        tag: 'render-to-test',
+        url: 'https://example.com',
+      });
+
+      // window is same domain as itself
+      const canRender = await MyComponent.canRenderTo(window);
+
+      expect(canRender).toBe(true);
+    });
   });
 });

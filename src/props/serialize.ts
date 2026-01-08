@@ -155,8 +155,7 @@ function serializeValue(
   bridge: FunctionBridge
 ): unknown {
   if (typeof value === 'function') {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-    return bridge.serialize(value as Function);
+    return bridge.serialize(value as (...args: unknown[]) => unknown);
   }
 
   const serialization = definition?.serialization ?? PROP_SERIALIZATION.JSON;

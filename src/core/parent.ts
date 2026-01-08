@@ -182,7 +182,10 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
 
     this.event = new EventEmitter();
     this.cleanup = new CleanupManager();
-    this.messenger = new Messenger(this.uid, window, getDomain());
+
+    // Create messenger with trusted domains for security
+    const trustedDomains = this.buildTrustedDomains();
+    this.messenger = new Messenger(this.uid, window, getDomain(), trustedDomains);
     this.bridge = new FunctionBridge(this.messenger);
 
     const propContext = this.createPropContext();
@@ -190,6 +193,37 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
 
     this.setupMessageHandlers();
     this.setupCleanup();
+  }
+
+  /**
+   * Builds the list of trusted domains for messenger communication.
+   * @internal
+   */
+  private buildTrustedDomains(): string | string[] | RegExp | undefined {
+    const domains: string[] = [];
+
+    const url = typeof this.options.url === 'function'
+      ? this.options.url(this.props as P)
+      : this.options.url;
+
+    try {
+      const targetUrl = new URL(url);
+      domains.push(targetUrl.origin);
+    } catch {
+      // Invalid URL, will be caught during render
+    }
+
+    if (this.options.domain) {
+      if (typeof this.options.domain === 'string') {
+        domains.push(this.options.domain);
+      } else if (Array.isArray(this.options.domain)) {
+        domains.push(...this.options.domain);
+      } else if (this.options.domain instanceof RegExp) {
+        return this.options.domain;
+      }
+    }
+
+    return domains.length > 0 ? domains : undefined;
   }
 
   /**
@@ -507,7 +541,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       hideIframe(this.iframe);
     }
 
-    // Create prerender element
     const prerenderContext: TemplateContext<P> & { cspNonce?: string } = {
       uid: this.uid,
       tag: this.options.tag,
@@ -525,7 +558,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
 
     this.prerenderElement = prerenderTemplateFn(prerenderContext);
 
-    // Create template context with pre-created frame elements
     const templateContext: TemplateContext<P> & { cspNonce?: string } = {
       uid: this.uid,
       tag: this.options.tag,
@@ -579,7 +611,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     iframe.setAttribute('allowtransparency', 'true');
     iframe.setAttribute('scrolling', 'auto');
 
-    // Apply dimensions
     if (dimensions.width !== undefined) {
       iframe.style.width = typeof dimensions.width === 'number'
         ? `${dimensions.width}px`
@@ -591,7 +622,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
         : dimensions.height;
     }
 
-    // Apply HTML attributes
     for (const [key, value] of Object.entries(attributes)) {
       if (value === undefined) continue;
       if (typeof value === 'boolean') {
@@ -601,7 +631,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       }
     }
 
-    // Apply CSS styles
     for (const [key, value] of Object.entries(style)) {
       if (value === undefined) continue;
       const cssValue = typeof value === 'number' ? `${value}px` : value;
@@ -783,7 +812,8 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       await promiseTimeout(
         this.initPromise.promise,
         this.options.timeout,
-        `Child component "${this.options.tag}" did not initialize`
+        `Child component "${this.options.tag}" (uid: ${this._uid}) did not initialize within ${this.options.timeout}ms. ` +
+        `Check that the child page loads correctly and calls the initialization code.`
       );
     } catch (err) {
       this.handleError(err as Error);
@@ -866,8 +896,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
           }
         }
 
-        // TODO: If anyParent option, iterate all components in registry
-
         return siblings;
       }
     );
@@ -903,7 +931,13 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     const callback = (this.props as Record<string, unknown>)[name];
     if (typeof callback === 'function') {
       try {
-        callback(...args);
+        const result = callback(...args);
+        // Handle async callbacks - catch promise rejections
+        if (result && typeof result === 'object' && 'catch' in result && typeof result.catch === 'function') {
+          (result as Promise<unknown>).catch((err: unknown) => {
+            console.error(`Error in async ${name} callback:`, err);
+          });
+        }
       } catch (err) {
         console.error(`Error in ${name} callback:`, err);
       }
@@ -917,6 +951,14 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   private async destroy(): Promise<void> {
     if (this.destroyed) return;
     this.destroyed = true;
+
+    // Reject any pending init promise to prevent hanging
+    if (this.initPromise) {
+      this.initPromise.reject(
+        new Error(`Component "${this.options.tag}" was destroyed before initialization completed`)
+      );
+      this.initPromise = null;
+    }
 
     if (this.iframe) {
       destroyIframe(this.iframe);

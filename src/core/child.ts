@@ -89,6 +89,9 @@ export class ChildComponent<P extends Record<string, unknown>> {
   /** @internal */
   private parentProps!: P;
 
+  /** @internal */
+  private initError: Error | null = null;
+
   /**
    * Creates a new ChildComponent instance.
    *
@@ -104,12 +107,18 @@ export class ChildComponent<P extends Record<string, unknown>> {
     this.parentDomain = payload.parentDomain;
     this.event = new EventEmitter();
 
+    // Create messenger with parent domain as trusted origin for security
+    this.messenger = new Messenger(this.uid, window, getDomain(), this.parentDomain);
+
+    // IMPORTANT: Set up message handlers immediately after creating messenger
+    // to prevent race conditions where parent messages arrive before handlers exist
+    this.setupMessageHandlers();
+
+    // Now safe to resolve parent and build xprops
     this.parentWindow = this.resolveParentWindow();
-    this.messenger = new Messenger(this.uid, window, getDomain());
     this.bridge = new FunctionBridge(this.messenger);
     this.xprops = this.buildXProps(payload);
     (window as unknown as { xprops: ChildProps<P> }).xprops = this.xprops;
-    this.setupMessageHandlers();
 
     this.sendInit();
   }
@@ -193,8 +202,26 @@ export class ChildComponent<P extends Record<string, unknown>> {
         { uid: this.uid, tag: this.tag }
       );
     } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.initError = error;
+
+      this.event.emit(EVENT.ERROR, {
+        type: 'init_failed',
+        message: `Failed to initialize child component: ${error.message}`,
+        error,
+      });
+
       console.error('Failed to send init message:', err);
     }
+  }
+
+  /**
+   * Returns the initialization error if one occurred.
+   *
+   * @returns The initialization error or null if successful
+   */
+  getInitError(): Error | null {
+    return this.initError;
   }
 
   /**

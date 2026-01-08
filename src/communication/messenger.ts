@@ -7,7 +7,7 @@
  * replacing post-robot with a minimal implementation.
  */
 
-import type { Message } from '../types';
+import type { Message, DomainMatcher } from '../types';
 import { MESSAGE_TYPE } from '../constants';
 import { generateShortUID } from '../utils/uid';
 import { createDeferred, type Deferred } from '../utils/promise';
@@ -75,19 +75,71 @@ export class Messenger {
   /** @internal */
   private destroyed = false;
 
+  /** @internal */
+  private allowedOrigins: Set<string> = new Set();
+
+  /** @internal */
+  private allowedOriginPatterns: RegExp[] = [];
+
   /**
    * Creates a new Messenger instance.
    *
    * @param uid - Unique identifier for this messenger
    * @param win - The window to listen for messages on
    * @param domain - The origin domain of this messenger
+   * @param trustedDomains - Optional domains to trust for incoming messages
    */
   constructor(
     private uid: string,
     private win: Window = window,
-    private domain: string = window.location.origin
+    private domain: string = window.location.origin,
+    trustedDomains?: DomainMatcher
   ) {
+    this.allowedOrigins.add(domain);
+
+    if (trustedDomains) {
+      this.addTrustedDomain(trustedDomains);
+    }
+
     this.setupListener();
+  }
+
+  /**
+   * Adds a trusted domain that can send messages to this messenger.
+   *
+   * @param domain - Domain pattern to trust (string, RegExp, or array)
+   */
+  addTrustedDomain(domain: DomainMatcher): void {
+    if (Array.isArray(domain)) {
+      for (const d of domain) {
+        this.allowedOrigins.add(d);
+      }
+    } else if (domain instanceof RegExp) {
+      this.allowedOriginPatterns.push(domain);
+    } else {
+      this.allowedOrigins.add(domain);
+    }
+  }
+
+  /**
+   * Checks if an origin is trusted.
+   *
+   * @param origin - The origin to check
+   * @returns True if the origin is trusted
+   * @internal
+   */
+  private isOriginTrusted(origin: string): boolean {
+    if (this.allowedOrigins.has(origin)) {
+      return true;
+    }
+
+    for (const pattern of this.allowedOriginPatterns) {
+      if (pattern.test(origin)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -195,6 +247,12 @@ export class Messenger {
   private setupListener(): void {
     this.listener = (event: MessageEvent) => {
       if (event.source === this.win) return;
+
+      // Security: Validate origin before processing any message
+      if (!this.isOriginTrusted(event.origin)) {
+        // Silently ignore messages from untrusted origins
+        return;
+      }
 
       const message = deserializeMessage(event.data);
       if (!message) return;
