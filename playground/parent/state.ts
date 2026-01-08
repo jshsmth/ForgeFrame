@@ -1,0 +1,51 @@
+/**
+ * State management for ForgeFrame Playground
+ */
+import ForgeFrame from '../../src';
+import type { ForgeFrameComponentInstance } from '../../src/types';
+import type { RenderContext, IframeStyle, PlaygroundConfig, DynamicProps } from './types';
+import { DEFAULT_CONFIG } from './config';
+
+// Current state
+export let currentContext: RenderContext = 'iframe';
+export let currentIframeStyle: IframeStyle = 'embedded';
+export let currentConfig: PlaygroundConfig = { ...DEFAULT_CONFIG };
+export let instance: ForgeFrameComponentInstance<DynamicProps> | null = null;
+export let modalOverlay: HTMLElement | null = null;
+export let currentPropValues: Record<string, unknown> = {};
+
+// Cache created components to avoid re-registration errors
+export const componentCache = new Map<string, ReturnType<typeof ForgeFrame.create<DynamicProps>>>();
+
+// State setters
+export function setCurrentContext(context: RenderContext) {
+  currentContext = context;
+}
+
+export function setCurrentIframeStyle(style: IframeStyle) {
+  currentIframeStyle = style;
+}
+
+export function setCurrentConfig(config: PlaygroundConfig) {
+  currentConfig = config;
+}
+
+export function setInstance(inst: ForgeFrameComponentInstance<DynamicProps> | null) {
+  instance = inst;
+}
+
+export function setModalOverlay(overlay: HTMLElement | null) {
+  modalOverlay = overlay;
+}
+
+export function resetPropValues() {
+  currentPropValues = {};
+}
+
+export function setPropValue(key: string, value: unknown) {
+  currentPropValues[key] = value;
+}
+
+export function deletePropValue(key: string) {
+  delete currentPropValues[key];
+}
