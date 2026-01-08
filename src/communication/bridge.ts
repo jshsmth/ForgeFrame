@@ -19,6 +19,12 @@ import type { Messenger } from './messenger';
 type CallableFunction = (...args: unknown[]) => unknown | Promise<unknown>;
 
 /**
+ * Maximum number of function references to keep in each registry.
+ * @internal
+ */
+const MAX_FUNCTIONS = 500;
+
+/**
  * Handles serialization and deserialization of functions for cross-domain calls.
  *
  * @remarks
@@ -48,6 +54,13 @@ export class FunctionBridge {
   private remoteFunctions = new Map<string, CallableFunction>();
 
   /**
+   * Tracks function IDs from the current serialization batch.
+   * Used for cleanup of stale references when props are updated.
+   * @internal
+   */
+  private currentBatchIds = new Set<string>();
+
+  /**
    * Creates a new FunctionBridge instance.
    *
    * @param messenger - The messenger to use for cross-domain calls
@@ -64,8 +77,17 @@ export class FunctionBridge {
    * @returns A function reference that can be sent across domains
    */
   serialize(fn: CallableFunction, name?: string): FunctionRef {
+    // Evict oldest entries if at capacity
+    if (this.localFunctions.size >= MAX_FUNCTIONS) {
+      const oldestKey = this.localFunctions.keys().next().value;
+      if (oldestKey) {
+        this.localFunctions.delete(oldestKey);
+      }
+    }
+
     const id = generateShortUID();
     this.localFunctions.set(id, fn);
+    this.currentBatchIds.add(id);
 
     return {
       __type__: 'function',
@@ -94,6 +116,14 @@ export class FunctionBridge {
     const cacheKey = `${ref.__id__}`;
     const cached = this.remoteFunctions.get(cacheKey);
     if (cached) return cached;
+
+    // Evict oldest entries if at capacity
+    if (this.remoteFunctions.size >= MAX_FUNCTIONS) {
+      const oldestKey = this.remoteFunctions.keys().next().value;
+      if (oldestKey) {
+        this.remoteFunctions.delete(oldestKey);
+      }
+    }
 
     const wrapper = async (...args: unknown[]): Promise<unknown> => {
       return this.messenger.send(targetWin, targetDomain, MESSAGE_NAME.CALL, {
@@ -153,11 +183,81 @@ export class FunctionBridge {
   }
 
   /**
+   * Starts a new serialization batch.
+   *
+   * @remarks
+   * Call this before serializing a new set of props. After serialization,
+   * call {@link finishBatch} to clean up functions from previous batches.
+   *
+   * @example
+   * ```typescript
+   * bridge.startBatch();
+   * const serialized = serializeFunctions(props, bridge);
+   * bridge.finishBatch();
+   * ```
+   */
+  startBatch(): void {
+    this.currentBatchIds.clear();
+  }
+
+  /**
+   * Finishes the current batch and removes functions not in this batch.
+   *
+   * @remarks
+   * This cleans up function references from previous prop updates that
+   * are no longer needed, preventing memory leaks.
+   *
+   * @param keepPrevious - If true, keeps previous batch functions (default: false)
+   */
+  finishBatch(keepPrevious = false): void {
+    if (keepPrevious) {
+      this.currentBatchIds.clear();
+      return;
+    }
+
+    // Remove functions not in the current batch
+    for (const id of this.localFunctions.keys()) {
+      if (!this.currentBatchIds.has(id)) {
+        this.localFunctions.delete(id);
+      }
+    }
+    this.currentBatchIds.clear();
+  }
+
+  /**
+   * Clears all remote function references.
+   *
+   * @remarks
+   * Call this when the remote window is no longer accessible
+   * (e.g., closed or navigated away).
+   */
+  clearRemote(): void {
+    this.remoteFunctions.clear();
+  }
+
+  /**
+   * Returns the current number of registered local functions.
+   * Useful for debugging and monitoring.
+   */
+  get localFunctionCount(): number {
+    return this.localFunctions.size;
+  }
+
+  /**
+   * Returns the current number of cached remote functions.
+   * Useful for debugging and monitoring.
+   */
+  get remoteFunctionCount(): number {
+    return this.remoteFunctions.size;
+  }
+
+  /**
    * Cleans up all function references.
    */
   destroy(): void {
     this.localFunctions.clear();
     this.remoteFunctions.clear();
+    this.currentBatchIds.clear();
   }
 }
 
@@ -166,26 +266,36 @@ export class FunctionBridge {
  *
  * @param obj - The object to process
  * @param bridge - The function bridge to use for serialization
+ * @param seen - Internal set for cycle detection (do not pass manually)
  * @returns A new object with all functions replaced by references
  *
  * @public
  */
 export function serializeFunctions(
   obj: unknown,
-  bridge: FunctionBridge
+  bridge: FunctionBridge,
+  seen: WeakSet<object> = new WeakSet()
 ): unknown {
   if (typeof obj === 'function') {
     return bridge.serialize(obj as CallableFunction);
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => serializeFunctions(item, bridge));
+    if (seen.has(obj)) {
+      throw new Error('Circular reference detected in props - arrays cannot contain circular references');
+    }
+    seen.add(obj);
+    return obj.map((item) => serializeFunctions(item, bridge, seen));
   }
 
   if (typeof obj === 'object' && obj !== null) {
+    if (seen.has(obj)) {
+      throw new Error('Circular reference detected in props - objects cannot contain circular references');
+    }
+    seen.add(obj);
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
-      result[key] = serializeFunctions(value, bridge);
+      result[key] = serializeFunctions(value, bridge, seen);
     }
     return result;
   }
@@ -200,6 +310,7 @@ export function serializeFunctions(
  * @param bridge - The function bridge to use for deserialization
  * @param targetWin - The window containing the original functions
  * @param targetDomain - The origin of the target window
+ * @param seen - Internal set for cycle detection (do not pass manually)
  * @returns A new object with all references replaced by callable wrappers
  *
  * @public
@@ -208,22 +319,31 @@ export function deserializeFunctions(
   obj: unknown,
   bridge: FunctionBridge,
   targetWin: Window,
-  targetDomain: string
+  targetDomain: string,
+  seen: WeakSet<object> = new WeakSet()
 ): unknown {
   if (FunctionBridge.isFunctionRef(obj)) {
     return bridge.deserialize(obj, targetWin, targetDomain);
   }
 
   if (Array.isArray(obj)) {
+    if (seen.has(obj)) {
+      throw new Error('Circular reference detected in serialized props');
+    }
+    seen.add(obj);
     return obj.map((item) =>
-      deserializeFunctions(item, bridge, targetWin, targetDomain)
+      deserializeFunctions(item, bridge, targetWin, targetDomain, seen)
     );
   }
 
   if (typeof obj === 'object' && obj !== null) {
+    if (seen.has(obj)) {
+      throw new Error('Circular reference detected in serialized props');
+    }
+    seen.add(obj);
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
-      result[key] = deserializeFunctions(value, bridge, targetWin, targetDomain);
+      result[key] = deserializeFunctions(value, bridge, targetWin, targetDomain, seen);
     }
     return result;
   }
