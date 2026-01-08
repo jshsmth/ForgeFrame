@@ -3,15 +3,15 @@ import {
   generateUID,
   generateShortUID,
   isValidUID,
-} from '../../src/utils/uid';
-import { CleanupManager } from '../../src/utils/cleanup';
+} from '@/utils/uid';
+import { CleanupManager } from '@/utils/cleanup';
 import {
   createDeferred,
   promiseTimeout,
   delay,
   waitFor,
   tryCatch,
-} from '../../src/utils/promise';
+} from '@/utils/promise';
 
 describe('UID Utils', () => {
   it('should generate unique UIDs', () => {

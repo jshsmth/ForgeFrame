@@ -5,7 +5,7 @@ import type { PlaygroundConfig } from './types';
 
 export const DEFAULT_CONFIG: PlaygroundConfig = {
   tag: 'playground-component',
-  url: 'https://localhost:5174/',
+  url: import.meta.env.VITE_CHILD_URL || 'https://localhost:5174/',
   dimensions: {
     width: '100%',
     height: '100%',

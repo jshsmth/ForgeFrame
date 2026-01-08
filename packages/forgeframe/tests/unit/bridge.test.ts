@@ -3,9 +3,9 @@ import {
   FunctionBridge,
   serializeFunctions,
   deserializeFunctions,
-} from '../../src/communication/bridge';
-import { Messenger } from '../../src/communication/messenger';
-import { MESSAGE_NAME } from '../../src/constants';
+} from '@/communication/bridge';
+import { Messenger } from '@/communication/messenger';
+import { MESSAGE_NAME } from '@/constants';
 
 // Mock messenger
 type GenericFunction = (...args: unknown[]) => unknown;

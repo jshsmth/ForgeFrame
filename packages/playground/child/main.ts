@@ -4,7 +4,7 @@
  * This demonstrates how to use ForgeFrame from the child (embedded) side.
  * The child receives props from the parent via window.xprops.
  */
-import ForgeFrame, { type ChildProps } from "../../src";
+import ForgeFrame, { type ChildProps } from "forgeframe";
 
 /**
  * Define your custom props interface.

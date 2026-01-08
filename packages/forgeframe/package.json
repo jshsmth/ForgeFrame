@@ -1,0 +1,45 @@
+{
+  "name": "forgeframe",
+  "version": "1.0.0",
+  "description": "Modern cross-domain iframe component framework - a TypeScript alternative to zoid",
+  "type": "module",
+  "module": "./dist/forgeframe.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/forgeframe.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "vite build && tsc --emitDeclarationOnly",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "iframe",
+    "cross-domain",
+    "component",
+    "zoid",
+    "postmessage",
+    "popup",
+    "embed"
+  ],
+  "author": "Josh Smith",
+  "license": "MIT",
+  "homepage": "https://github.com/jshsmth/ForgeFrame#readme",
+  "bugs": {
+    "url": "https://github.com/jshsmth/ForgeFrame/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jshsmth/ForgeFrame.git"
+  }
+}

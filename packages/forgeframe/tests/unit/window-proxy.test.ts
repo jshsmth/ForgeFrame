@@ -7,8 +7,8 @@ import {
   resolveWindowRef,
   serializeWindowRef,
   clearWindowRegistry,
-} from '../../src/window/proxy';
-import type { WindowRef } from '../../src/types';
+} from '@/window/proxy';
+import type { WindowRef } from '@/types';
 
 describe('Window Registry', () => {
   beforeEach(() => {

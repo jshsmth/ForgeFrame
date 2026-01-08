@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Messenger } from '../../src/communication/messenger';
+import { Messenger } from '@/communication/messenger';
 import {
   serializeMessage,
   createRequestMessage,
   createResponseMessage,
-} from '../../src/communication/protocol';
-import { MESSAGE_TYPE } from '../../src/constants';
+} from '@/communication/protocol';
+import { MESSAGE_TYPE } from '@/constants';
 
 describe('Messenger', () => {
   let messenger: Messenger;

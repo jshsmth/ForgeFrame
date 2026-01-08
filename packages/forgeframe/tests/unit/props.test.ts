@@ -4,11 +4,11 @@ import {
   validateProps,
   getPropsForChild,
   propsToQueryParams,
-} from '../../src/props/normalize';
-import { cloneProps } from '../../src/props/serialize';
-import { BUILTIN_PROP_DEFINITIONS, getDefaultForType } from '../../src/props/definitions';
-import { PROP_TYPE } from '../../src/constants';
-import type { PropsDefinition, PropContext } from '../../src/types';
+} from '@/props/normalize';
+import { cloneProps } from '@/props/serialize';
+import { BUILTIN_PROP_DEFINITIONS, getDefaultForType } from '@/props/definitions';
+import { PROP_TYPE } from '@/constants';
+import type { PropsDefinition, PropContext } from '@/types';
 
 describe('Props Normalization', () => {
   const createContext = <P extends Record<string, unknown>>(
