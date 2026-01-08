@@ -7,13 +7,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'ForgeFrame',
-      formats: ['es', 'cjs', 'umd'],
-      fileName: (format) => {
-        if (format === 'es') return 'forgeframe.js';
-        if (format === 'cjs') return 'forgeframe.cjs';
-        return 'forgeframe.umd.js';
-      },
+      formats: ['es'],
+      fileName: 'forgeframe',
     },
     rollupOptions: {
       output: {
@@ -21,7 +16,7 @@ export default defineConfig({
         exports: 'named',
       },
     },
-    sourcemap: true,
+    sourcemap: false,
     minify: 'esbuild',
     target: 'es2022',
   },
