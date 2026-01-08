@@ -43,6 +43,32 @@ function renderEmbedded() {
   // - Context info (uid, tag, getParentDomain, etc.)
   const xprops = window.xprops!;
 
+  // Built-in xprops keys to exclude from "Received Props"
+  const builtInKeys = new Set([
+    'uid', 'tag', 'close', 'focus', 'resize', 'show', 'hide',
+    'onProps', 'onError', 'getParent', 'getParentDomain', 'export',
+    'parent', 'getSiblings', 'children'
+  ]);
+
+  const getUserProps = () => {
+    const userProps: Record<string, unknown> = {};
+    for (const key of Object.keys(xprops)) {
+      if (!builtInKeys.has(key) && typeof xprops[key] !== 'function') {
+        userProps[key] = xprops[key];
+      }
+    }
+    return userProps;
+  };
+
+  const renderPropsGrid = () => {
+    const userProps = getUserProps();
+    return Object.entries(userProps)
+      .map(([key, value]) => `
+        <dt>${key}</dt>
+        <dd id="prop-${key}">${value}</dd>
+      `).join('');
+  };
+
   const render = () => {
     app.innerHTML = `
       <div class="header">
@@ -53,11 +79,8 @@ function renderEmbedded() {
       <div class="grid">
         <div class="card">
           <h3>Received Props</h3>
-          <dl class="props-grid">
-            <dt>name</dt>
-            <dd id="prop-name">${xprops.name}</dd>
-            <dt>count</dt>
-            <dd id="prop-count">${xprops.count}</dd>
+          <dl class="props-grid" id="props-display">
+            ${renderPropsGrid()}
           </dl>
         </div>
 
@@ -170,13 +193,13 @@ function renderEmbedded() {
   // Listen for prop updates from parent
   xprops.onProps((newProps) => {
     console.log("[Child] Props updated:", newProps);
-    // Update UI with new values
-    const nameEl = document.getElementById("prop-name");
-    const countEl = document.getElementById("prop-count");
-    if (nameEl && "name" in newProps)
-      nameEl.textContent = String(newProps.name);
-    if (countEl && "count" in newProps)
-      countEl.textContent = String(newProps.count);
+    // Update UI with new values - handle any prop dynamically
+    for (const [key, value] of Object.entries(newProps)) {
+      const el = document.getElementById(`prop-${key}`);
+      if (el) {
+        el.textContent = String(value);
+      }
+    }
     setStatus("Props updated");
   });
 
