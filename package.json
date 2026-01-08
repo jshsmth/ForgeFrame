@@ -3,16 +3,15 @@
   "version": "1.0.0",
   "description": "Modern cross-domain iframe component framework - a TypeScript alternative to zoid",
   "type": "module",
-  "main": "./dist/forgeframe.cjs",
   "module": "./dist/forgeframe.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/forgeframe.js",
-      "require": "./dist/forgeframe.cjs"
+      "import": "./dist/forgeframe.js"
     }
   },
+  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -21,7 +20,7 @@
     "dev:parent": "vite --config vite.config.parent.ts",
     "dev:child": "vite --config vite.config.child.ts",
     "dev:playground": "concurrently \"npm run dev:parent\" \"npm run dev:child\"",
-    "build": "tsc --emitDeclarationOnly && vite build",
+    "build": "vite build && tsc --emitDeclarationOnly",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
@@ -37,8 +36,12 @@
     "popup",
     "embed"
   ],
-  "author": "",
+  "author": "Josh Smith",
   "license": "MIT",
+  "homepage": "https://github.com/jshsmth/ForgeFrame#readme",
+  "bugs": {
+    "url": "https://github.com/jshsmth/ForgeFrame/issues"
+  },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.1.0",
     "concurrently": "^9.1.2",
@@ -50,6 +53,6 @@
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/jshsmth/ForgeFrame.git"
   }
 }
