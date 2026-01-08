@@ -10,8 +10,8 @@
 
 import type {
   ComponentOptions,
-  ZoidComponent,
-  ZoidComponentInstance,
+  ForgeFrameComponent,
+  ForgeFrameComponentInstance,
   ChildProps,
 } from '../types';
 import { ParentComponent } from './parent';
@@ -23,7 +23,7 @@ import { isSameDomain } from '../window/helpers';
  * Global registry of all defined components.
  * @internal
  */
-const componentRegistry = new Map<string, ZoidComponent<Record<string, unknown>>>();
+const componentRegistry = new Map<string, ForgeFrameComponent<Record<string, unknown>>>();
 
 /**
  * Validates component configuration options.
@@ -85,10 +85,10 @@ function validateComponentOptions<P>(options: ComponentOptions<P>): void {
  */
 export function create<P extends Record<string, unknown> = Record<string, unknown>, X = unknown>(
   options: ComponentOptions<P>
-): ZoidComponent<P, X> {
+): ForgeFrameComponent<P, X> {
   validateComponentOptions(options);
 
-  const instances: ZoidComponentInstance<P, X>[] = [];
+  const instances: ForgeFrameComponentInstance<P, X>[] = [];
 
   let childXProps: ChildProps<P> | undefined;
   if (isChildOfComponent(options.tag)) {
@@ -103,7 +103,7 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
    * @param props - Props to pass to the component instance
    * @returns A new component instance
    */
-  const Component = function (props: Partial<P> = {} as Partial<P>): ZoidComponentInstance<P, X> {
+  const Component = function (props: Partial<P> = {} as Partial<P>): ForgeFrameComponentInstance<P, X> {
     const instance = new ParentComponent<P, X>(options, props);
 
     instances.push(instance);
@@ -116,7 +116,7 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
     });
 
     return instance;
-  } as ZoidComponent<P, X>;
+  } as ForgeFrameComponent<P, X>;
 
   Component.instances = instances;
 
@@ -145,7 +145,7 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
     }
   };
 
-  componentRegistry.set(options.tag, Component as ZoidComponent<Record<string, unknown>>);
+  componentRegistry.set(options.tag, Component as ForgeFrameComponent<Record<string, unknown>>);
 
   return Component;
 }
@@ -170,8 +170,8 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
  */
 export function getComponent<P extends Record<string, unknown> = Record<string, unknown>, X = unknown>(
   tag: string
-): ZoidComponent<P, X> | undefined {
-  return componentRegistry.get(tag) as ZoidComponent<P, X> | undefined;
+): ForgeFrameComponent<P, X> | undefined {
+  return componentRegistry.get(tag) as ForgeFrameComponent<P, X> | undefined;
 }
 
 /**
@@ -194,7 +194,7 @@ export function getComponent<P extends Record<string, unknown> = Record<string, 
  * @public
  */
 export async function destroy<P extends Record<string, unknown>>(
-  instance: ZoidComponentInstance<P>
+  instance: ForgeFrameComponentInstance<P>
 ): Promise<void> {
   await instance.close();
 }

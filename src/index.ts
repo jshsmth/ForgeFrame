@@ -198,8 +198,8 @@ export { PopupOpenError } from './render/popup';
 export type {
   // Component types
   ComponentOptions,
-  ZoidComponent,
-  ZoidComponentInstance,
+  ForgeFrameComponent,
+  ForgeFrameComponentInstance,
   ChildProps,
 
   // Props types
