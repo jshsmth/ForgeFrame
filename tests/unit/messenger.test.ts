@@ -29,7 +29,13 @@ describe('Messenger', () => {
       location: { origin: 'https://parent.com' },
     } as unknown as Window;
 
-    messenger = new Messenger('test-uid', mockWindow, 'https://parent.com');
+    // Create messenger with trusted domains for testing
+    messenger = new Messenger('test-uid', mockWindow, 'https://parent.com', [
+      'https://child.com',
+      'https://target.com',
+      'https://sender.com',
+      'https://example.com',
+    ]);
   });
 
   afterEach(() => {
@@ -326,6 +332,86 @@ describe('Messenger', () => {
 
       // Should not send any response for unknown message
       expect(targetWindow.postMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('origin validation', () => {
+    it('should reject messages from untrusted origins', async () => {
+      const handler = vi.fn();
+      messenger.on('test', handler);
+
+      const request = createRequestMessage('req-1', 'test', { data: 'value' }, {
+        uid: 'malicious-uid',
+        domain: 'https://malicious.com',
+      });
+
+      // Dispatch from an untrusted origin
+      dispatchMessage(serializeMessage(request), {} as Window, 'https://malicious.com');
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Handler should NOT be called for untrusted origin
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('should accept messages from trusted origins', async () => {
+      const handler = vi.fn().mockReturnValue({ ok: true });
+      messenger.on('test', handler);
+
+      const request = createRequestMessage('req-1', 'test', { data: 'value' }, {
+        uid: 'trusted-uid',
+        domain: 'https://child.com',
+      });
+
+      // Dispatch from a trusted origin
+      dispatchMessage(serializeMessage(request), { postMessage: vi.fn() } as unknown as Window, 'https://child.com');
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(handler).toHaveBeenCalled();
+    });
+
+    it('should allow adding trusted domains dynamically', async () => {
+      const handler = vi.fn().mockReturnValue({ ok: true });
+      messenger.on('test', handler);
+
+      const request = createRequestMessage('req-1', 'test', { data: 'value' }, {
+        uid: 'new-uid',
+        domain: 'https://new-trusted.com',
+      });
+
+      // Initially untrusted
+      dispatchMessage(serializeMessage(request), { postMessage: vi.fn() } as unknown as Window, 'https://new-trusted.com');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(handler).not.toHaveBeenCalled();
+
+      // Add trust
+      messenger.addTrustedDomain('https://new-trusted.com');
+
+      // Now should work
+      dispatchMessage(serializeMessage(request), { postMessage: vi.fn() } as unknown as Window, 'https://new-trusted.com');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(handler).toHaveBeenCalled();
+    });
+
+    it('should support RegExp patterns for trusted domains', async () => {
+      // Create new messenger with RegExp pattern
+      const regexMessenger = new Messenger('regex-uid', mockWindow, 'https://parent.com', /^https:\/\/.*\.trusted\.com$/);
+
+      const handler = vi.fn().mockReturnValue({ ok: true });
+      regexMessenger.on('test', handler);
+
+      const request = createRequestMessage('req-1', 'test', {}, {
+        uid: 'subdomain-uid',
+        domain: 'https://sub.trusted.com',
+      });
+
+      dispatchMessage(serializeMessage(request), { postMessage: vi.fn() } as unknown as Window, 'https://sub.trusted.com');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(handler).toHaveBeenCalled();
+
+      regexMessenger.destroy();
     });
   });
 
