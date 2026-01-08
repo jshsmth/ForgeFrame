@@ -46,7 +46,7 @@ function renderEmbedded() {
   const render = () => {
     app.innerHTML = `
       <div class="header">
-        <h2>Child Component</h2>
+        <h2><span>Child</span> Component</h2>
         <span class="badge">${xprops.tag}</span>
       </div>
 
@@ -192,8 +192,8 @@ function renderStandalone() {
     <div class="not-embedded">
       <h2>Child Component</h2>
       <p>This page is designed to be embedded via ForgeFrame.</p>
-      <p>Open <strong>https://localhost:5173</strong> and click <strong>Render Component</strong>.</p>
-      <p class="hint">window.xprops is not available (no ForgeFrame payload).</p>
+      <p>Open <code>https://localhost:5173</code> and click <strong>Render</strong>.</p>
+      <p class="hint">window.xprops is not available (no ForgeFrame payload)</p>
     </div>
   `;
 }

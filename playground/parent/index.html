@@ -3,233 +3,451 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ForgeFrame Playground - Parent</title>
+    <title>ForgeFrame Playground</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
     <style>
       * {
         box-sizing: border-box;
       }
       body {
         font-family: system-ui, -apple-system, sans-serif;
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 2rem;
+        margin: 0;
+        padding: 0;
         background: #f5f5f5;
-      }
-      h1 {
         color: #333;
-        margin-bottom: 0.5rem;
-      }
-      .subtitle {
-        color: #666;
-        margin-bottom: 1.5rem;
-      }
-      .section {
-        background: white;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-      .section h3 {
-        margin-top: 0;
-        margin-bottom: 0.75rem;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        color: #666;
-        letter-spacing: 0.05em;
-      }
-      .controls {
+        height: 100vh;
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
+      }
+
+      /* Header */
+      .header {
+        background: #fff;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #333;
+      }
+      .header h1 span {
+        color: #e94560;
+      }
+      .header-controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
+      .header-info {
+        font-size: 0.7rem;
+        color: #888;
+      }
+
+      /* Mode Toggle */
+      .mode-group {
+        display: flex;
+        align-items: center;
         gap: 0.5rem;
       }
-      button {
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 4px;
-        background: #0066cc;
-        color: white;
+      .mode-group.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+      .mode-label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #666;
+      }
+      .mode-toggle {
+        display: flex;
+      }
+      .mode-btn {
+        padding: 0.35rem 0.6rem;
+        border: 1px solid #ddd;
+        background: #fff;
+        color: #666;
         cursor: pointer;
-        font-size: 0.875rem;
+        font-size: 0.7rem;
+        font-weight: 500;
+        transition: all 0.15s;
       }
-      button:hover {
-        background: #0055aa;
+      .mode-btn:first-child {
+        border-radius: 4px 0 0 4px;
       }
-      button:disabled {
-        background: #ccc;
-        cursor: not-allowed;
+      .mode-btn:last-child {
+        border-radius: 0 4px 4px 0;
       }
-      button.secondary {
-        background: #666;
+      .mode-btn:not(:last-child) {
+        border-right: none;
       }
-      button.secondary:hover {
-        background: #555;
+      .mode-btn:hover {
+        background: #f5f5f5;
       }
-      button.danger {
-        background: #cc3333;
+      .mode-btn.active {
+        background: #e94560;
+        border-color: #e94560;
+        color: #fff;
       }
-      button.danger:hover {
-        background: #aa2222;
+
+      /* Main 2x2 Grid */
+      .main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 1px;
+        background: #e0e0e0;
+        flex: 1;
+        min-height: 0;
       }
-      button.success {
+
+      /* Panel Base */
+      .panel {
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        background: #fafafa;
+        border-bottom: 1px solid #eee;
+        flex-shrink: 0;
+      }
+      .panel-header h3 {
+        margin: 0;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #888;
+        font-weight: 600;
+      }
+      .panel-content {
+        flex: 1;
+        overflow: auto;
+        min-height: 0;
+      }
+
+      /* JSON Editor Panel */
+      #json-editor {
+        width: 100%;
+        height: 100%;
+        background: #fff;
+        color: #333;
+        border: none;
+        padding: 0.75rem;
+        font-family: 'SF Mono', 'Consolas', monospace;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        resize: none;
+        outline: none;
+        tab-size: 2;
+      }
+      .editor-error {
+        padding: 0.4rem 0.75rem;
+        background: #fff5f5;
+        color: #c00;
+        font-size: 0.7rem;
+        font-family: monospace;
+        border-top: 1px solid #fcc;
+        display: none;
+      }
+      .editor-error.visible {
+        display: block;
+      }
+
+      /* Code Preview Panel */
+      .code-preview pre {
+        margin: 0;
+        padding: 0.75rem;
+        font-size: 0.75rem;
+        line-height: 1.5;
+        background: #fff;
+      }
+      .code-preview code {
+        font-family: 'SF Mono', 'Consolas', monospace;
+      }
+
+      /* Component Panel */
+      .component-controls {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        background: #fafafa;
+        border-bottom: 1px solid #eee;
+      }
+      .component-controls button {
+        padding: 0.35rem 0.6rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.7rem;
+        font-weight: 500;
+        transition: all 0.15s;
+      }
+      .btn-render {
         background: #28a745;
+        border-color: #28a745;
+        color: #fff;
       }
-      button.success:hover {
+      .btn-render:hover {
         background: #218838;
       }
+      .btn-render:disabled {
+        background: #ccc;
+        border-color: #ccc;
+        cursor: not-allowed;
+      }
+      .btn-close {
+        background: #dc3545;
+        border-color: #dc3545;
+        color: #fff;
+      }
+      .btn-close:hover {
+        background: #c82333;
+      }
+      .btn-close:disabled {
+        background: #ccc;
+        border-color: #ccc;
+        cursor: not-allowed;
+      }
+      .btn-secondary {
+        background: #fff;
+        color: #666;
+      }
+      .btn-secondary:hover {
+        background: #f5f5f5;
+      }
+      .btn-secondary:disabled {
+        background: #f5f5f5;
+        color: #bbb;
+        cursor: not-allowed;
+      }
+      .controls-spacer {
+        flex: 1;
+      }
+      .status-indicator {
+        font-size: 0.7rem;
+        color: #888;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #ccc;
+      }
+      .status-dot.rendered {
+        background: #28a745;
+      }
+      .status-dot.error {
+        background: #dc3545;
+      }
+
+      /* Props Bar */
+      .props-bar {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        background: #fafafa;
+        border-bottom: 1px solid #eee;
+      }
+      .prop-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .prop-item label {
+        font-size: 0.65rem;
+        color: #888;
+        text-transform: uppercase;
+      }
+      .prop-item input {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        color: #333;
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+        font-family: inherit;
+        width: 80px;
+      }
+      .prop-item input:focus {
+        outline: none;
+        border-color: #e94560;
+      }
+      .prop-item button {
+        padding: 0.25rem 0.5rem;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        color: #666;
+        cursor: pointer;
+        font-size: 0.65rem;
+      }
+      .prop-item button:hover {
+        background: #f5f5f5;
+      }
+
+      /* Component Container */
       #component-container {
-        border: 2px dashed #ccc;
-        border-radius: 8px;
-        height: 450px;
-        background: white;
+        flex: 1;
+        margin: 0.75rem;
+        border: 2px dashed #ddd;
+        border-radius: 6px;
+        background: #fafafa;
         position: relative;
+        min-height: 0;
       }
       #component-container.has-component {
         border-style: solid;
-        border-color: #0066cc;
+        border-color: #e94560;
+        background: #fff;
       }
-      /* Make ForgeFrame wrapper fill container */
       #component-container > div {
         width: 100%;
         height: 100%;
       }
-      .info-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1rem;
-      }
-      .info-card {
-        background: #f8f9fa;
-        padding: 0.75rem;
-        border-radius: 4px;
-      }
-      .info-card label {
-        font-size: 0.75rem;
-        color: #666;
-        display: block;
-        margin-bottom: 0.25rem;
-      }
-      .info-card .value {
-        font-weight: 600;
-        color: #333;
-        font-family: monospace;
-      }
-      .log {
-        margin-top: 1rem;
-        padding: 1rem;
-        background: #1e1e1e;
-        color: #0f0;
-        font-family: monospace;
+      .container-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #bbb;
         font-size: 0.8rem;
-        border-radius: 4px;
-        max-height: 200px;
-        overflow-y: auto;
+      }
+      #component-container.has-component .container-placeholder {
+        display: none;
+      }
+
+      /* Event Log Panel */
+      #event-log {
+        padding: 0.5rem 0.75rem;
+        font-family: 'SF Mono', 'Consolas', monospace;
+        font-size: 0.7rem;
+        line-height: 1.7;
       }
       .log-entry {
-        margin: 0.25rem 0;
-      }
-      .log-entry.error {
-        color: #ff6b6b;
-      }
-      .log-entry.success {
-        color: #69db7c;
-      }
-      .log-entry.info {
-        color: #74c0fc;
-      }
-      .context-toggle {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        margin-bottom: 1rem;
-      }
-      .context-toggle label {
-        font-size: 0.875rem;
         color: #666;
       }
-      select {
-        padding: 0.5rem;
-        border-radius: 4px;
-        border: 1px solid #ccc;
+      .log-entry .time {
+        color: #999;
+        margin-right: 0.5rem;
       }
-      input[type="text"], input[type="number"] {
-        padding: 0.5rem;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-        width: 120px;
+      .log-entry.success {
+        color: #28a745;
+      }
+      .log-entry.error {
+        color: #dc3545;
+      }
+      .log-entry.info {
+        color: #0066cc;
       }
     </style>
   </head>
   <body>
-    <h1>ForgeFrame Playground</h1>
-    <p class="subtitle">Parent window on <strong>https://localhost:5173</strong> embedding child from <strong>https://localhost:5174</strong></p>
-
-    <div class="section">
-      <h3>Component Lifecycle</h3>
-      <div class="context-toggle">
-        <label>Render as:</label>
-        <select id="context-select">
-          <option value="embedded">Embedded Iframe</option>
-          <option value="modal">Iframe as Modal</option>
-          <option value="popup">Popup Window</option>
-        </select>
-      </div>
-      <div class="controls">
-        <button id="btn-render" class="success">Render Component</button>
-        <button id="btn-close" class="danger" disabled>Close Component</button>
-      </div>
-    </div>
-
-    <div class="section">
-      <h3>Props & Communication</h3>
-      <div class="controls">
-        <input type="text" id="input-name" placeholder="Name prop" value="World" />
-        <button id="btn-update-name" class="secondary" disabled>Update Name</button>
-        <button id="btn-increment" class="secondary" disabled>Increment Count</button>
-      </div>
-    </div>
-
-    <div class="section">
-      <h3>Iframe Controls</h3>
-      <div class="controls">
-        <button id="btn-show" class="secondary" disabled>Show</button>
-        <button id="btn-hide" class="secondary" disabled>Hide</button>
-        <button id="btn-focus" class="secondary" disabled>Focus</button>
-        <input type="number" id="input-height" placeholder="Height" value="420" style="width: 80px;" />
-        <button id="btn-resize" class="secondary" disabled>Resize</button>
-      </div>
-    </div>
-
-    <div class="section">
-      <h3>Component State</h3>
-      <div class="info-grid">
-        <div class="info-card">
-          <label>Status</label>
-          <div class="value" id="status">Not rendered</div>
+    <header class="header">
+      <h1><span>Forge</span>Frame Playground</h1>
+      <div class="header-controls">
+        <div class="mode-group">
+          <span class="mode-label">Context</span>
+          <div class="mode-toggle">
+            <button class="mode-btn active" data-context="iframe">Iframe</button>
+            <button class="mode-btn" data-context="popup">Popup</button>
+          </div>
         </div>
-        <div class="info-card">
-          <label>Context</label>
-          <div class="value" id="context-display">-</div>
+        <div class="mode-group" id="iframe-style-group">
+          <span class="mode-label">Style</span>
+          <div class="mode-toggle">
+            <button class="mode-btn active" data-style="embedded">Embedded</button>
+            <button class="mode-btn" data-style="modal">Modal</button>
+          </div>
         </div>
-        <div class="info-card">
-          <label>Child Exports</label>
-          <div class="value" id="exports-display">-</div>
-        </div>
-        <div class="info-card">
-          <label>Last Greeting</label>
-          <div class="value" id="greeting-display">-</div>
+        <div class="header-info">
+          localhost:5173 → localhost:5174
         </div>
       </div>
-    </div>
+    </header>
 
-    <div class="section">
-      <h3>Component Container</h3>
-      <div id="component-container"></div>
-    </div>
+    <main class="main">
+      <!-- Top Left: JSON Config -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Component Options</h3>
+          <button class="btn-secondary" id="btn-reset" style="padding: 0.2rem 0.4rem; font-size: 0.65rem;">Reset</button>
+        </div>
+        <div class="panel-content">
+          <textarea id="json-editor" spellcheck="false"></textarea>
+        </div>
+        <div class="editor-error" id="editor-error"></div>
+      </div>
 
-    <div class="log" id="log"></div>
+      <!-- Top Right: Component Preview -->
+      <div class="panel">
+        <div class="component-controls">
+          <button class="btn-render" id="btn-render">Render</button>
+          <button class="btn-close" id="btn-close" disabled>Close</button>
+          <button class="btn-secondary" id="btn-focus" disabled>Focus</button>
+          <button class="btn-secondary" id="btn-show" disabled>Show</button>
+          <button class="btn-secondary" id="btn-hide" disabled>Hide</button>
+          <div class="controls-spacer"></div>
+          <div class="status-indicator">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Ready</span>
+          </div>
+        </div>
+        <div class="props-bar">
+          <div class="prop-item">
+            <label>name</label>
+            <input type="text" id="prop-name" value="World" />
+            <button id="btn-update-name">Set</button>
+          </div>
+          <div class="prop-item">
+            <label>count</label>
+            <input type="number" id="prop-count" value="0" />
+            <button id="btn-update-count">Set</button>
+          </div>
+        </div>
+        <div id="component-container">
+          <div class="container-placeholder">Click "Render" to load component</div>
+        </div>
+      </div>
 
+      <!-- Bottom Left: Generated Code -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Generated Code</h3>
+        </div>
+        <div class="panel-content code-preview">
+          <pre><code class="language-typescript" id="code-output"></code></pre>
+        </div>
+      </div>
+
+      <!-- Bottom Right: Events -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Events</h3>
+          <button class="btn-secondary" id="btn-clear-log" style="padding: 0.2rem 0.4rem; font-size: 0.65rem;">Clear</button>
+        </div>
+        <div class="panel-content" id="event-log"></div>
+      </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
