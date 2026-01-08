@@ -19,6 +19,18 @@ import type { ForgeFrameComponentInstance } from '../../src/types';
 type RenderContext = 'iframe' | 'popup';
 type IframeStyle = 'embedded' | 'modal';
 
+interface ModalStyle {
+  overlayBackground?: string;
+  boxBackground?: string;
+  borderRadius?: string;
+  boxShadow?: string;
+  width?: number;
+  height?: number;
+  headerBackground?: string;
+  headerColor?: string;
+  borderColor?: string;
+}
+
 interface PlaygroundConfig {
   tag: string;
   url: string;
@@ -34,6 +46,7 @@ interface PlaygroundConfig {
     element?: string;
   };
   timeout?: number;
+  modalStyle?: ModalStyle;
   props?: {
     name?: { type: string; required?: boolean; default?: string };
     count?: { type: string; default?: number };
@@ -62,6 +75,17 @@ const DEFAULT_CONFIG: PlaygroundConfig = {
   style: {
     border: 'none',
     borderRadius: '8px',
+  },
+  modalStyle: {
+    overlayBackground: 'rgba(0, 0, 0, 0.5)',
+    boxBackground: '#ffffff',
+    borderRadius: '8px',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+    width: 500,
+    height: 400,
+    headerBackground: '#fafafa',
+    headerColor: '#333333',
+    borderColor: '#e0e0e0',
   },
   props: {
     name: {
@@ -276,17 +300,101 @@ function generateCode(config: PlaygroundConfig, context: RenderContext, iframeSt
     .map(([key, val]) => `    ${key}: ${JSON.stringify(val)}`)
     .join(',\n');
 
-  const dimensionsStr = config.dimensions
-    ? `  dimensions: { width: ${JSON.stringify(config.dimensions.width)}, height: ${JSON.stringify(config.dimensions.height)} },`
-    : '';
-
   const styleStr = styleEntries ? `  style: {\n${styleEntries}\n  },` : '';
   const propsStr = propsEntries ? `  props: {\n${propsEntries}\n  },` : '';
 
-  // Add containerTemplate note for modal style
-  const modalNote = context === 'iframe' && iframeStyle === 'modal'
-    ? `  // For modal: add containerTemplate to wrap in overlay
-  // containerTemplate: ({ doc, frame, close }) => { ... },`
+  // Generate modal-specific or embedded-specific code
+  const isModal = context === 'iframe' && iframeStyle === 'modal';
+  const ms = config.modalStyle || {};
+
+  if (isModal) {
+    const modalWidth = ms.width || 500;
+    const modalHeight = ms.height || 400;
+
+    return `import ForgeFrame from 'forgeframe';
+
+// Define your modal component
+const MyComponent = ForgeFrame.create({
+  tag: ${JSON.stringify(config.tag)},
+  url: ${JSON.stringify(config.url)},
+  dimensions: { width: ${modalWidth}, height: ${modalHeight} },
+${styleStr}
+  containerTemplate: ({ doc, frame, prerenderFrame, close, uid }) => {
+    // Create overlay
+    const overlay = doc.createElement('div');
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      inset: '0',
+      background: ${JSON.stringify(ms.overlayBackground || 'rgba(0, 0, 0, 0.5)')},
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: '10000',
+    });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
+
+    // Create modal box
+    const modal = doc.createElement('div');
+    Object.assign(modal.style, {
+      background: ${JSON.stringify(ms.boxBackground || '#ffffff')},
+      borderRadius: ${JSON.stringify(ms.borderRadius || '8px')},
+      boxShadow: ${JSON.stringify(ms.boxShadow || '0 20px 60px rgba(0, 0, 0, 0.3)')},
+      border: '1px solid ${ms.borderColor || '#e0e0e0'}',
+      overflow: 'hidden',
+    });
+
+    // Create header
+    const header = doc.createElement('div');
+    Object.assign(header.style, {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '0.75rem 1rem',
+      background: ${JSON.stringify(ms.headerBackground || '#fafafa')},
+      borderBottom: '1px solid ${ms.borderColor || '#e0e0e0'}',
+    });
+
+    const title = doc.createElement('span');
+    title.textContent = 'My Component';
+    title.style.color = ${JSON.stringify(ms.headerColor || '#333333')};
+
+    const closeBtn = doc.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = 'background:none;border:none;font-size:1.5rem;cursor:pointer;';
+    closeBtn.addEventListener('click', () => close());
+
+    header.append(title, closeBtn);
+
+    // Create body for iframe
+    const body = doc.createElement('div');
+    body.style.cssText = 'width:${modalWidth}px;height:${modalHeight}px;position:relative;';
+    if (prerenderFrame) body.appendChild(prerenderFrame);
+    if (frame) body.appendChild(frame);
+
+    modal.append(header, body);
+    overlay.appendChild(modal);
+    return overlay;
+  },
+${propsStr}
+});
+
+// Create instance with props
+const instance = MyComponent({
+${instancePropsEntries},
+  onGreet: (msg) => console.log('Greeting:', msg),
+  onClose: () => instance.close(),
+  onError: (err) => console.error(err),
+});
+
+// Render to body for modal overlay
+await instance.render(document.body, 'iframe');`;
+  }
+
+  // Non-modal (embedded iframe or popup)
+  const dimensionsStr = config.dimensions
+    ? `  dimensions: { width: ${JSON.stringify(config.dimensions.width)}, height: ${JSON.stringify(config.dimensions.height)} },`
     : '';
 
   return `import ForgeFrame from 'forgeframe';
@@ -297,7 +405,6 @@ const MyComponent = ForgeFrame.create({
   url: ${JSON.stringify(config.url)},
 ${dimensionsStr}
 ${styleStr}
-${modalNote}
 ${propsStr}
 });
 
@@ -310,8 +417,7 @@ ${instancePropsEntries},
 });
 
 // Render the component
-// Context: ${context}${context === 'iframe' ? ` (${iframeStyle})` : ''}
-await instance.render('${iframeStyle === 'modal' ? 'document.body' : '#container'}', '${context}');`;
+await instance.render('#container', '${context}');`;
 }
 
 function updateCodePreview() {
@@ -426,18 +532,22 @@ function buildPropsSchema(config: PlaygroundConfig) {
 }
 
 function createModalTemplate(config: PlaygroundConfig) {
-  const cacheKey = `${config.tag}-modal`;
+  const cacheKey = `${config.tag}-modal-${JSON.stringify(config.modalStyle || {})}`;
   if (componentCache.has(cacheKey)) {
     return componentCache.get(cacheKey)!;
   }
 
+  const ms = config.modalStyle || {};
+  const modalWidth = ms.width || 500;
+  const modalHeight = ms.height || 400;
+
   const component = ForgeFrame.create<DynamicProps>({
-    tag: cacheKey,
+    tag: `${config.tag}-modal-${Date.now()}`, // Unique tag to allow style changes
     url: config.url,
-    dimensions: { width: 500, height: 400 },
+    dimensions: { width: modalWidth, height: modalHeight },
     style: {
       border: 'none',
-      borderRadius: '0 0 8px 8px',
+      borderRadius: `0 0 ${ms.borderRadius || '8px'} ${ms.borderRadius || '8px'}`,
       ...config.style,
     },
     containerTemplate: ({ doc, frame, prerenderFrame, close, uid }) => {
@@ -449,7 +559,7 @@ function createModalTemplate(config: PlaygroundConfig) {
         left: '0',
         right: '0',
         bottom: '0',
-        background: 'rgba(0, 0, 0, 0.5)',
+        background: ms.overlayBackground || 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -462,11 +572,11 @@ function createModalTemplate(config: PlaygroundConfig) {
 
       const modal = doc.createElement('div');
       Object.assign(modal.style, {
-        background: '#fff',
-        borderRadius: '8px',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+        background: ms.boxBackground || '#fff',
+        borderRadius: ms.borderRadius || '8px',
+        boxShadow: ms.boxShadow || '0 20px 60px rgba(0, 0, 0, 0.3)',
         overflow: 'hidden',
-        border: '1px solid #e0e0e0',
+        border: `1px solid ${ms.borderColor || '#e0e0e0'}`,
       });
 
       const header = doc.createElement('div');
@@ -475,15 +585,15 @@ function createModalTemplate(config: PlaygroundConfig) {
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '0.75rem 1rem',
-        background: '#fafafa',
-        borderBottom: '1px solid #eee',
+        background: ms.headerBackground || '#fafafa',
+        borderBottom: `1px solid ${ms.borderColor || '#eee'}`,
       });
 
       const title = doc.createElement('span');
       title.textContent = 'ForgeFrame Component';
       Object.assign(title.style, {
         fontSize: '0.875rem',
-        color: '#333',
+        color: ms.headerColor || '#333',
         fontWeight: '500',
       });
 
@@ -505,8 +615,8 @@ function createModalTemplate(config: PlaygroundConfig) {
 
       const body = doc.createElement('div');
       Object.assign(body.style, {
-        width: '500px',
-        height: '400px',
+        width: `${modalWidth}px`,
+        height: `${modalHeight}px`,
         position: 'relative',
       });
 
@@ -528,13 +638,12 @@ function createModalTemplate(config: PlaygroundConfig) {
 }
 
 function createComponent(config: PlaygroundConfig) {
-  const cacheKey = config.tag;
-  if (componentCache.has(cacheKey)) {
-    return componentCache.get(cacheKey)!;
-  }
+  // Create fresh component with unique tag each time to avoid registration conflicts
+  // (unlike modals which can be cached since they append to body fresh each time)
+  const uniqueTag = `${config.tag}-${Date.now()}`;
 
   const component = ForgeFrame.create<DynamicProps>({
-    tag: config.tag,
+    tag: uniqueTag,
     url: config.url,
     dimensions: config.dimensions as { width?: string | number; height?: string | number },
     style: config.style as Record<string, string>,
@@ -544,7 +653,6 @@ function createComponent(config: PlaygroundConfig) {
     props: buildPropsSchema(config),
   });
 
-  componentCache.set(cacheKey, component);
   return component;
 }
 
@@ -621,6 +729,19 @@ async function renderComponent() {
       if (modalOverlay) {
         modalOverlay.remove();
         modalOverlay = null;
+      }
+      // Clear container for embedded iframes (keep only the placeholder)
+      if (!useModal) {
+        const placeholder = elements.container.querySelector('.container-placeholder');
+        elements.container.innerHTML = '';
+        if (placeholder) {
+          elements.container.appendChild(placeholder);
+        } else {
+          const newPlaceholder = document.createElement('div');
+          newPlaceholder.className = 'container-placeholder';
+          newPlaceholder.textContent = 'Click "Render" to load component';
+          elements.container.appendChild(newPlaceholder);
+        }
       }
     });
     instance.event.on('error', (err) => {
