@@ -100,6 +100,29 @@ export interface IframeAttributes {
 }
 
 /**
+ * CSS styles that can be applied to the iframe element.
+ *
+ * @remarks
+ * These styles are applied directly to the iframe's style property.
+ * Common use cases include setting borders, shadows, border-radius, etc.
+ *
+ * @example
+ * ```typescript
+ * const styles: IframeStyles = {
+ *   border: 'none',
+ *   borderRadius: '8px',
+ *   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+ * };
+ * ```
+ *
+ * @public
+ */
+export interface IframeStyles {
+  /** CSS properties to apply to the iframe */
+  [key: string]: string | number | undefined;
+}
+
+/**
  * Result of an eligibility check for component rendering.
  *
  * @public
@@ -414,6 +437,20 @@ export interface ComponentOptions<P = Record<string, unknown>> {
    * Additional HTML attributes for the iframe/popup.
    */
   attributes?: IframeAttributes | ((props: P) => IframeAttributes);
+
+  /**
+   * CSS styles to apply to the iframe element.
+   *
+   * @example
+   * ```typescript
+   * style: {
+   *   border: 'none',
+   *   borderRadius: '8px',
+   *   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+   * }
+   * ```
+   */
+  style?: IframeStyles | ((props: P) => IframeStyles);
 
   /**
    * Timeout in milliseconds for child initialization.

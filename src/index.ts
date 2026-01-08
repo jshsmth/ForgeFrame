@@ -217,6 +217,7 @@ export type {
   DomainMatcher,
   AutoResizeOptions,
   IframeAttributes,
+  IframeStyles,
   EligibilityResult,
 
   // Event types

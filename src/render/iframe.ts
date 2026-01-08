@@ -1,4 +1,4 @@
-import type { Dimensions, IframeAttributes } from '../types';
+import type { Dimensions, IframeAttributes, IframeStyles } from '../types';
 
 /**
  * Configuration options for creating an iframe.
@@ -30,6 +30,11 @@ export interface IframeOptions {
    * Optional additional HTML attributes to set on the iframe element.
    */
   attributes?: IframeAttributes;
+
+  /**
+   * Optional CSS styles to apply to the iframe element.
+   */
+  style?: IframeStyles;
 }
 
 /**
@@ -63,17 +68,18 @@ export interface IframeOptions {
  * @public
  */
 export function createIframe(options: IframeOptions): HTMLIFrameElement {
-  const { url, name, container, dimensions, attributes = {} } = options;
+  const { url, name, container, dimensions, attributes = {}, style = {} } = options;
 
   const iframe = document.createElement('iframe');
 
   iframe.name = name;
   iframe.setAttribute('frameborder', '0');
   iframe.setAttribute('allowtransparency', 'true');
-  iframe.setAttribute('scrolling', 'no');
+  iframe.setAttribute('scrolling', 'auto');
 
   applyDimensions(iframe, dimensions);
 
+  // Apply HTML attributes
   for (const [key, value] of Object.entries(attributes)) {
     if (value === undefined) continue;
 
@@ -85,6 +91,9 @@ export function createIframe(options: IframeOptions): HTMLIFrameElement {
       iframe.setAttribute(key, value);
     }
   }
+
+  // Apply CSS styles
+  applyStyles(iframe, style);
 
   // Default sandbox if not specified (security)
   if (!attributes.sandbox) {
@@ -295,6 +304,35 @@ function applyDimensions(
   }
   if (dimensions.height !== undefined) {
     iframe.style.height = normalizeDimension(dimensions.height);
+  }
+}
+
+/**
+ * Applies CSS styles to an iframe element.
+ *
+ * @remarks
+ * Iterates through the style object and applies each property to the iframe's
+ * style. Numeric values are converted to pixel strings for properties that
+ * typically use pixels.
+ *
+ * @param iframe - The iframe element to style
+ * @param style - Object containing CSS property-value pairs
+ *
+ * @internal
+ */
+function applyStyles(
+  iframe: HTMLIFrameElement,
+  style: IframeStyles
+): void {
+  for (const [key, value] of Object.entries(style)) {
+    if (value === undefined) continue;
+
+    // Convert camelCase to kebab-case for CSS properties
+    const cssValue = typeof value === 'number' ? `${value}px` : value;
+    iframe.style.setProperty(
+      key.replace(/([A-Z])/g, '-$1').toLowerCase(),
+      cssValue
+    );
   }
 }
 

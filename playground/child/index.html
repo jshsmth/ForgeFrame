@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ForgeFrame Playground - Child</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        height: 100%;
+      }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        margin: 0;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100%;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      h2 {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+      .badge {
+        background: rgba(255,255,255,0.2);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 8px;
+        padding: 0.75rem;
+      }
+      .card.full {
+        grid-column: 1 / -1;
+      }
+      .card h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.8;
+      }
+      .props-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+      }
+      .props-grid dt {
+        opacity: 0.7;
+      }
+      .props-grid dd {
+        margin: 0;
+        font-weight: 600;
+        font-family: monospace;
+      }
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      button {
+        padding: 0.4rem 0.75rem;
+        border: none;
+        border-radius: 4px;
+        background: white;
+        color: #764ba2;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.8rem;
+        transition: transform 0.1s, box-shadow 0.1s;
+      }
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      }
+      button:active {
+        transform: translateY(0);
+      }
+      button.danger {
+        background: #ff6b6b;
+        color: white;
+      }
+      button.warning {
+        background: #ffd43b;
+        color: #333;
+      }
+      .status {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        text-align: center;
+        margin-top: 0.5rem;
+      }
+      .not-embedded {
+        text-align: center;
+        padding: 2rem;
+      }
+      .not-embedded h2 {
+        margin-bottom: 1rem;
+      }
+      .not-embedded p {
+        opacity: 0.8;
+        margin: 0.5rem 0;
+      }
+      .not-embedded .hint {
+        margin-top: 2rem;
+        opacity: 0.5;
+        font-size: 0.875rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
