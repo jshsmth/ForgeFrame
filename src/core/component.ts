@@ -1,3 +1,13 @@
+/**
+ * @packageDocumentation
+ * Component factory and registry module.
+ *
+ * @remarks
+ * This module provides the main entry point for creating ForgeFrame components.
+ * It manages a global registry of all defined components and handles component
+ * creation, validation, and lifecycle management.
+ */
+
 import type {
   ComponentOptions,
   ZoidComponent,
@@ -9,11 +19,19 @@ import { initChild } from './child';
 import { isChildOfComponent } from '../window/name-payload';
 import { isSameDomain } from '../window/helpers';
 
-// Global registry of components
+/**
+ * Global registry of all defined components.
+ * @internal
+ */
 const componentRegistry = new Map<string, ZoidComponent<Record<string, unknown>>>();
 
 /**
- * Validate component options
+ * Validates component configuration options.
+ *
+ * @param options - The component options to validate
+ * @throws Error if tag is missing, invalid, or already registered
+ * @throws Error if url is missing
+ * @internal
  */
 function validateComponentOptions<P>(options: ComponentOptions<P>): void {
   if (!options.tag) {
@@ -36,19 +54,42 @@ function validateComponentOptions<P>(options: ComponentOptions<P>): void {
 }
 
 /**
- * Create a new component
- * This is the main entry point - equivalent to zoid.create()
+ * Creates a new ForgeFrame component definition.
+ *
+ * @remarks
+ * This is the main entry point for defining components. It creates a factory
+ * function that can be called with props to create component instances.
+ * Equivalent to zoid.create() for migration purposes.
+ *
+ * @typeParam P - The props type for the component
+ * @typeParam X - The exports type that the child can expose
+ * @param options - Component configuration options
+ * @returns A component factory function
+ *
+ * @example
+ * ```typescript
+ * const LoginComponent = create({
+ *   tag: 'login-component',
+ *   url: 'https://auth.example.com/login',
+ *   props: {
+ *     email: { type: PROP_TYPE.STRING },
+ *     onLogin: { type: PROP_TYPE.FUNCTION },
+ *   },
+ * });
+ *
+ * const instance = LoginComponent({ email: 'user@example.com' });
+ * await instance.render('#container');
+ * ```
+ *
+ * @public
  */
 export function create<P extends Record<string, unknown> = Record<string, unknown>, X = unknown>(
   options: ComponentOptions<P>
 ): ZoidComponent<P, X> {
-  // Validate options
   validateComponentOptions(options);
 
-  // Track all instances
   const instances: ZoidComponentInstance<P, X>[] = [];
 
-  // Initialize child if we're in a child window for this component
   let childXProps: ChildProps<P> | undefined;
   if (isChildOfComponent(options.tag)) {
     const child = initChild<P>(options.props);
@@ -58,15 +99,15 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
   }
 
   /**
-   * Component factory function
-   * Call this with props to create an instance
+   * Component factory function that creates new instances.
+   * @param props - Props to pass to the component instance
+   * @returns A new component instance
    */
   const Component = function (props: Partial<P> = {} as Partial<P>): ZoidComponentInstance<P, X> {
     const instance = new ParentComponent<P, X>(options, props);
 
     instances.push(instance);
 
-    // Remove from instances on destroy
     instance.event.once('destroy', () => {
       const index = instances.indexOf(instance);
       if (index !== -1) {
@@ -77,7 +118,6 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
     return instance;
   } as ZoidComponent<P, X>;
 
-  // Attach static properties
   Component.instances = instances;
 
   Component.isChild = (): boolean => {
@@ -105,14 +145,28 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
     }
   };
 
-  // Register component
   componentRegistry.set(options.tag, Component as ZoidComponent<Record<string, unknown>>);
 
   return Component;
 }
 
 /**
- * Get a registered component by tag
+ * Retrieves a registered component by its tag name.
+ *
+ * @typeParam P - The props type for the component
+ * @typeParam X - The exports type that the child can expose
+ * @param tag - The unique tag identifier of the component
+ * @returns The component factory function, or undefined if not found
+ *
+ * @example
+ * ```typescript
+ * const LoginComponent = getComponent('login-component');
+ * if (LoginComponent) {
+ *   LoginComponent({ email: 'user@example.com' }).render('#container');
+ * }
+ * ```
+ *
+ * @public
  */
 export function getComponent<P extends Record<string, unknown> = Record<string, unknown>, X = unknown>(
   tag: string
@@ -121,7 +175,23 @@ export function getComponent<P extends Record<string, unknown> = Record<string, 
 }
 
 /**
- * Destroy a single component instance
+ * Destroys a single component instance.
+ *
+ * @remarks
+ * This closes the component and cleans up all associated resources.
+ *
+ * @typeParam P - The props type for the component
+ * @param instance - The component instance to destroy
+ *
+ * @example
+ * ```typescript
+ * const instance = MyComponent({ prop: 'value' });
+ * await instance.render('#container');
+ * // Later...
+ * await destroy(instance);
+ * ```
+ *
+ * @public
  */
 export async function destroy<P extends Record<string, unknown>>(
   instance: ZoidComponentInstance<P>
@@ -130,7 +200,20 @@ export async function destroy<P extends Record<string, unknown>>(
 }
 
 /**
- * Destroy all instances of a component
+ * Destroys all instances of a specific component.
+ *
+ * @remarks
+ * Useful for cleanup when a component type is no longer needed.
+ *
+ * @param tag - The component tag name to destroy all instances of
+ *
+ * @example
+ * ```typescript
+ * // Destroy all login component instances
+ * await destroyComponents('login-component');
+ * ```
+ *
+ * @public
  */
 export async function destroyComponents(tag: string): Promise<void> {
   const component = componentRegistry.get(tag);
@@ -141,7 +224,21 @@ export async function destroyComponents(tag: string): Promise<void> {
 }
 
 /**
- * Destroy all component instances
+ * Destroys all ForgeFrame component instances.
+ *
+ * @remarks
+ * This is a global cleanup function that destroys every component
+ * instance across all component types.
+ *
+ * @example
+ * ```typescript
+ * // Clean up everything on page unload
+ * window.addEventListener('beforeunload', () => {
+ *   destroyAll();
+ * });
+ * ```
+ *
+ * @public
  */
 export async function destroyAll(): Promise<void> {
   const tags = Array.from(componentRegistry.keys());
@@ -149,18 +246,28 @@ export async function destroyAll(): Promise<void> {
 }
 
 /**
- * Unregister a component (for testing/cleanup)
+ * Removes a component from the registry.
+ *
+ * @remarks
+ * Primarily used for testing and cleanup. Does not destroy active instances.
+ *
+ * @param tag - The component tag to unregister
+ * @internal
  */
 export function unregisterComponent(tag: string): void {
   componentRegistry.delete(tag);
 }
 
 /**
- * Clear all registered components (for testing/cleanup)
+ * Clears all components from the registry.
+ *
+ * @remarks
+ * Primarily used for testing and cleanup. Does not destroy active instances.
+ *
+ * @internal
  */
 export function clearComponents(): void {
   componentRegistry.clear();
 }
 
-// Re-export child utilities
 export { isChild, getXProps } from './child';

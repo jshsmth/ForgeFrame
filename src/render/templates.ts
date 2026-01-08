@@ -1,8 +1,36 @@
 import type { TemplateContext, Dimensions } from '../types';
 
 /**
- * Default container template
- * Creates a wrapper div that holds the iframe/popup with transitions
+ * Creates the default container element for ForgeFrame components.
+ *
+ * @remarks
+ * This template creates a wrapper `<div>` element that holds the iframe or
+ * popup content. The container is styled as an inline-block with relative
+ * positioning to support absolute positioning of child elements like
+ * prerender overlays.
+ *
+ * The container includes:
+ * - A unique ID based on the component's UID
+ * - A `data-forgeframe-tag` attribute for identification
+ * - Base styles for dimensions and overflow handling
+ *
+ * @typeParam P - The props type for the component
+ * @param ctx - The template context containing document, dimensions, and metadata
+ * @returns The created container HTMLElement
+ *
+ * @example
+ * ```typescript
+ * const container = defaultContainerTemplate({
+ *   doc: document,
+ *   dimensions: { width: 400, height: 300 },
+ *   uid: 'abc123',
+ *   tag: 'payment-button',
+ *   props: {}
+ * });
+ * document.body.appendChild(container);
+ * ```
+ *
+ * @public
  */
 export function defaultContainerTemplate<P>(
   ctx: TemplateContext<P>
@@ -13,7 +41,6 @@ export function defaultContainerTemplate<P>(
   container.id = `forgeframe-container-${uid}`;
   container.setAttribute('data-forgeframe-tag', tag);
 
-  // Apply base styles
   Object.assign(container.style, {
     display: 'inline-block',
     position: 'relative',
@@ -26,8 +53,39 @@ export function defaultContainerTemplate<P>(
 }
 
 /**
- * Default prerender template
- * Shows a loading spinner while the component loads
+ * Creates the default prerender template showing a loading spinner.
+ *
+ * @remarks
+ * This template creates an overlay element displayed while the actual
+ * component content is loading. It includes:
+ * - A centered wrapper with a light gray background
+ * - An animated spinning loader
+ * - CSS keyframes for the spin animation
+ *
+ * The overlay uses absolute positioning to cover the container and
+ * a high z-index to appear above other content.
+ *
+ * If a CSP (Content Security Policy) nonce is provided, it will be
+ * applied to the inline style element to comply with security policies.
+ *
+ * @typeParam P - The props type for the component
+ * @param ctx - The template context with optional CSP nonce
+ * @returns The created prerender overlay HTMLElement
+ *
+ * @example
+ * ```typescript
+ * const prerender = defaultPrerenderTemplate({
+ *   doc: document,
+ *   dimensions: { width: 400, height: 300 },
+ *   uid: 'abc123',
+ *   tag: 'payment-button',
+ *   props: {},
+ *   cspNonce: 'abc123xyz'
+ * });
+ * container.appendChild(prerender);
+ * ```
+ *
+ * @public
  */
 export function defaultPrerenderTemplate<P>(
   ctx: TemplateContext<P> & { cspNonce?: string }
@@ -48,7 +106,6 @@ export function defaultPrerenderTemplate<P>(
     zIndex: '100',
   });
 
-  // Create spinner
   const spinner = doc.createElement('div');
   Object.assign(spinner.style, {
     width: '40px',
@@ -59,7 +116,6 @@ export function defaultPrerenderTemplate<P>(
     animation: 'forgeframe-spin 1s linear infinite',
   });
 
-  // Add keyframes animation
   const style = doc.createElement('style');
   if (cspNonce) {
     style.setAttribute('nonce', cspNonce);
@@ -77,7 +133,18 @@ export function defaultPrerenderTemplate<P>(
 }
 
 /**
- * Normalize dimension to CSS value
+ * Normalizes a dimension value to a CSS-compatible string.
+ *
+ * @remarks
+ * This function converts dimension values to CSS strings:
+ * - `undefined` returns `'100%'` as the default
+ * - Numbers are converted to pixel strings (e.g., `400` becomes `'400px'`)
+ * - Strings are returned as-is (e.g., `'50%'`, `'auto'`)
+ *
+ * @param value - The dimension value to normalize
+ * @returns A CSS-compatible dimension string
+ *
+ * @internal
  */
 function normalizeDimension(value: string | number | undefined): string {
   if (value === undefined) return '100%';
@@ -86,7 +153,24 @@ function normalizeDimension(value: string | number | undefined): string {
 }
 
 /**
- * Apply dimensions to an element
+ * Applies width and height dimensions to an HTML element.
+ *
+ * @remarks
+ * Only dimensions that are defined will be applied. Numeric values are
+ * automatically converted to pixel strings. This function can be used
+ * to resize any HTML element, not just iframes.
+ *
+ * @param element - The HTML element to apply dimensions to
+ * @param dimensions - The dimensions object containing width and/or height
+ *
+ * @example
+ * ```typescript
+ * const div = document.createElement('div');
+ * applyDimensions(div, { width: 400, height: 300 });
+ * applyDimensions(div, { width: '100%' }); // Only width, height unchanged
+ * ```
+ *
+ * @public
  */
 export function applyDimensions(
   element: HTMLElement,
@@ -101,7 +185,30 @@ export function applyDimensions(
 }
 
 /**
- * Create inline styles element
+ * Creates a `<style>` element with the provided CSS content.
+ *
+ * @remarks
+ * This utility function creates an inline style element that can be appended
+ * to the document. If a CSP (Content Security Policy) nonce is provided,
+ * it will be set on the style element to allow the styles to be applied
+ * in environments with strict CSP rules.
+ *
+ * @param doc - The Document object to create the element in
+ * @param css - The CSS content to include in the style element
+ * @param nonce - Optional CSP nonce for security compliance
+ * @returns The created HTMLStyleElement
+ *
+ * @example
+ * ```typescript
+ * const style = createStyleElement(
+ *   document,
+ *   '.my-class { color: red; }',
+ *   'abc123xyz'
+ * );
+ * document.head.appendChild(style);
+ * ```
+ *
+ * @public
  */
 export function createStyleElement(
   doc: Document,
@@ -117,7 +224,29 @@ export function createStyleElement(
 }
 
 /**
- * Fade in animation helper
+ * Animates an element fading in from transparent to fully opaque.
+ *
+ * @remarks
+ * This function applies a CSS opacity transition to create a smooth fade-in
+ * effect. It sets the initial opacity to 0, triggers a reflow to ensure the
+ * transition applies, then sets opacity to 1.
+ *
+ * The returned Promise resolves after the animation duration completes.
+ * Note that the Promise uses `setTimeout` rather than `transitionend` events
+ * for more predictable behavior across browsers.
+ *
+ * @param element - The HTML element to fade in
+ * @param duration - Animation duration in milliseconds (default: 200)
+ * @returns A Promise that resolves when the animation completes
+ *
+ * @example
+ * ```typescript
+ * const element = document.getElementById('my-element')!;
+ * await fadeIn(element, 300);
+ * console.log('Fade in complete');
+ * ```
+ *
+ * @public
  */
 export function fadeIn(element: HTMLElement, duration = 200): Promise<void> {
   return new Promise((resolve) => {
@@ -134,7 +263,29 @@ export function fadeIn(element: HTMLElement, duration = 200): Promise<void> {
 }
 
 /**
- * Fade out animation helper
+ * Animates an element fading out from its current opacity to transparent.
+ *
+ * @remarks
+ * This function applies a CSS opacity transition to create a smooth fade-out
+ * effect. Unlike {@link fadeIn}, it does not force a reflow since the element
+ * is already visible and the transition can begin immediately.
+ *
+ * The returned Promise resolves after the animation duration completes.
+ * Note that this function only changes opacity; the element remains in the
+ * DOM and may need to be removed or hidden separately after fading out.
+ *
+ * @param element - The HTML element to fade out
+ * @param duration - Animation duration in milliseconds (default: 200)
+ * @returns A Promise that resolves when the animation completes
+ *
+ * @example
+ * ```typescript
+ * const element = document.getElementById('my-element')!;
+ * await fadeOut(element, 300);
+ * element.remove(); // Remove after fade completes
+ * ```
+ *
+ * @public
  */
 export function fadeOut(element: HTMLElement, duration = 200): Promise<void> {
   return new Promise((resolve) => {
@@ -146,20 +297,44 @@ export function fadeOut(element: HTMLElement, duration = 200): Promise<void> {
 }
 
 /**
- * Swap prerender content with actual content
+ * Swaps the prerender placeholder with the actual content using fade animations.
+ *
+ * @remarks
+ * This function performs a smooth transition from the prerender loading state
+ * to the actual content. The process:
+ * 1. If a prerender element exists, fade it out and remove it from the DOM
+ * 2. Set the actual content's initial opacity to 0
+ * 3. Append the actual content to the container
+ * 4. Fade in the actual content
+ *
+ * Both fade animations use a 150ms duration for a quick but smooth transition.
+ *
+ * @param container - The parent container element
+ * @param prerenderElement - The prerender placeholder element, or `null` if none exists
+ * @param actualElement - The actual content element to display
+ * @returns A Promise that resolves when the swap animation completes
+ *
+ * @example
+ * ```typescript
+ * const container = document.getElementById('widget-container')!;
+ * const prerender = container.querySelector('.prerender');
+ * const iframe = createIframe({ ... });
+ *
+ * await swapPrerenderContent(container, prerender, iframe);
+ * ```
+ *
+ * @public
  */
 export async function swapPrerenderContent(
   container: HTMLElement,
   prerenderElement: HTMLElement | null,
   actualElement: HTMLElement
 ): Promise<void> {
-  // Hide prerender
   if (prerenderElement) {
     await fadeOut(prerenderElement, 150);
     prerenderElement.remove();
   }
 
-  // Show actual content
   actualElement.style.opacity = '0';
   container.appendChild(actualElement);
   await fadeIn(actualElement, 150);

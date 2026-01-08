@@ -1,21 +1,40 @@
+/**
+ * @packageDocumentation
+ * Message protocol for ForgeFrame communication.
+ *
+ * @remarks
+ * This module defines the message format and serialization for cross-domain
+ * communication. Messages are prefixed to identify ForgeFrame traffic.
+ */
+
 import type { Message } from '../types';
 import { MESSAGE_TYPE } from '../constants';
 
 /**
- * Protocol prefix to identify ForgeFrame messages
+ * Protocol prefix to identify ForgeFrame messages.
+ * @public
  */
 export const PROTOCOL_PREFIX = 'forgeframe:';
 
 /**
- * Serialize a message for postMessage
+ * Serializes a message for postMessage transmission.
+ *
+ * @param message - The message to serialize
+ * @returns JSON string prefixed with the protocol identifier
+ *
+ * @public
  */
 export function serializeMessage(message: Message): string {
   return PROTOCOL_PREFIX + JSON.stringify(message);
 }
 
 /**
- * Deserialize a message from postMessage
- * Returns null if not a ForgeFrame message
+ * Deserializes a message from postMessage data.
+ *
+ * @param data - The raw data received from postMessage
+ * @returns The parsed message, or null if not a valid ForgeFrame message
+ *
+ * @public
  */
 export function deserializeMessage(data: unknown): Message | null {
   if (typeof data !== 'string') return null;
@@ -25,7 +44,6 @@ export function deserializeMessage(data: unknown): Message | null {
     const json = data.slice(PROTOCOL_PREFIX.length);
     const message = JSON.parse(json) as Message;
 
-    // Validate message structure
     if (!message.id || !message.type || !message.name || !message.source) {
       return null;
     }
@@ -37,7 +55,15 @@ export function deserializeMessage(data: unknown): Message | null {
 }
 
 /**
- * Create a request message
+ * Creates a request message.
+ *
+ * @param id - Unique message identifier
+ * @param name - Message name/type
+ * @param data - Message payload
+ * @param source - Sender identification
+ * @returns A formatted request message
+ *
+ * @public
  */
 export function createRequestMessage(
   id: string,
@@ -55,7 +81,15 @@ export function createRequestMessage(
 }
 
 /**
- * Create a response message
+ * Creates a response message.
+ *
+ * @param requestId - The ID of the request being responded to
+ * @param data - Response payload
+ * @param source - Sender identification
+ * @param error - Optional error if the request failed
+ * @returns A formatted response message
+ *
+ * @public
  */
 export function createResponseMessage(
   requestId: string,
@@ -79,7 +113,13 @@ export function createResponseMessage(
 }
 
 /**
- * Create an acknowledgement message
+ * Creates an acknowledgement message.
+ *
+ * @param requestId - The ID of the request being acknowledged
+ * @param source - Sender identification
+ * @returns A formatted acknowledgement message
+ *
+ * @public
  */
 export function createAckMessage(
   requestId: string,

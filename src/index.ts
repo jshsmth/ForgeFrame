@@ -1,6 +1,32 @@
 /**
- * ForgeFrame - Modern cross-domain component framework
- * A minimal, TypeScript-first alternative to zoid
+ * @packageDocumentation
+ * ForgeFrame - Modern cross-domain component framework.
+ *
+ * @remarks
+ * A minimal, TypeScript-first alternative to zoid with zero runtime dependencies.
+ * Enables rendering components in iframes or popups across domains while
+ * seamlessly passing props (including functions) between parent and child.
+ *
+ * @example
+ * ```typescript
+ * import ForgeFrame from 'forgeframe';
+ *
+ * // Define a component
+ * const LoginComponent = ForgeFrame.create({
+ *   tag: 'login-component',
+ *   url: 'https://auth.example.com/login',
+ *   props: {
+ *     email: { type: ForgeFrame.PROP_TYPE.STRING },
+ *     onLogin: { type: ForgeFrame.PROP_TYPE.FUNCTION },
+ *   },
+ * });
+ *
+ * // Render the component
+ * LoginComponent({
+ *   email: 'user@example.com',
+ *   onLogin: (user) => console.log('Logged in:', user),
+ * }).render('#container');
+ * ```
  */
 
 // Core API
@@ -26,18 +52,40 @@ import {
 // Errors
 import { PopupOpenError } from './render/popup';
 
-// Auto-initialize child if in a ForgeFrame window
-// This makes window.xprops available automatically
+// Auto-initialize child if in a ForgeFrame window.
+// This makes window.xprops available automatically in child contexts.
 initChild();
 
 /**
- * Main ForgeFrame API object
- * Provides zoid-compatible interface
+ * Main ForgeFrame API object.
+ *
+ * @remarks
+ * Provides a zoid-compatible interface for creating and managing
+ * cross-domain components. All methods and constants are accessible
+ * through this object.
+ *
+ * @example
+ * ```typescript
+ * import ForgeFrame from 'forgeframe';
+ *
+ * const Component = ForgeFrame.create({
+ *   tag: 'my-component',
+ *   url: '/component.html',
+ * });
+ * ```
+ *
+ * @public
  */
 export const ForgeFrame = {
   /**
-   * Create a new component
+   * Create a new component definition.
+   *
+   * @remarks
+   * This is the main entry point for defining components. Returns a
+   * component factory function that can be called to create instances.
+   *
    * @example
+   * ```typescript
    * const MyComponent = ForgeFrame.create({
    *   tag: 'my-component',
    *   url: 'https://example.com/component',
@@ -45,48 +93,85 @@ export const ForgeFrame = {
    *     onLogin: { type: ForgeFrame.PROP_TYPE.FUNCTION },
    *   },
    * });
+   *
+   * const instance = MyComponent({ onLogin: (user) => {} });
+   * await instance.render('#container');
+   * ```
    */
   create,
 
   /**
-   * Destroy a single component instance
+   * Destroy a single component instance.
+   *
+   * @param instance - The component instance to destroy
    */
   destroy,
 
   /**
-   * Destroy all instances of a specific component
+   * Destroy all instances of a specific component by tag.
+   *
+   * @param tag - The component tag name
    */
   destroyComponents,
 
   /**
-   * Destroy all ForgeFrame component instances
+   * Destroy all ForgeFrame component instances.
    */
   destroyAll,
 
   /**
-   * Check if current window is a child component
+   * Check if the current window is a child component context.
+   *
+   * @returns True if running inside a ForgeFrame iframe/popup
    */
   isChild,
 
   /**
-   * Get xprops from child window
+   * Get xprops from the current child window.
+   *
+   * @returns The xprops object if in child context, undefined otherwise
    */
   getXProps,
 
-  // Constants
+  /**
+   * Prop type constants for defining component props.
+   * @see {@link PROP_TYPE}
+   */
   PROP_TYPE,
+
+  /**
+   * Serialization strategy constants.
+   * @see {@link PROP_SERIALIZATION}
+   */
   PROP_SERIALIZATION,
+
+  /**
+   * Rendering context constants (IFRAME, POPUP).
+   * @see {@link CONTEXT}
+   */
   CONTEXT,
+
+  /**
+   * Lifecycle event name constants.
+   * @see {@link EVENT}
+   */
   EVENT,
 
-  // Errors
+  /**
+   * Error thrown when popup window fails to open.
+   */
   PopupOpenError,
 
-  // Version
+  /**
+   * Current library version.
+   */
   VERSION,
 } as const;
 
-// Default export
+/**
+ * Default export of the ForgeFrame API object.
+ * @public
+ */
 export default ForgeFrame;
 
 // Named exports for tree-shaking

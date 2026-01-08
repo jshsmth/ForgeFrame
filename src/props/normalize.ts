@@ -1,3 +1,12 @@
+/**
+ * @packageDocumentation
+ * Props normalization and validation module.
+ *
+ * @remarks
+ * This module handles merging user props with defaults, validating prop
+ * types, and filtering props for sending to child components.
+ */
+
 import type {
   PropDefinition,
   PropsDefinition,
@@ -9,7 +18,15 @@ import { BUILTIN_PROP_DEFINITIONS } from './definitions';
 import { matchDomain } from '../window/helpers';
 
 /**
- * Merge user props with defaults and compute values
+ * Merges user props with defaults and computes derived values.
+ *
+ * @typeParam P - The props type
+ * @param userProps - Props provided by the user
+ * @param definitions - Prop definitions from component config
+ * @param context - Context for computed props
+ * @returns Normalized props object
+ *
+ * @public
  */
 export function normalizeProps<P extends Record<string, unknown>>(
   userProps: Partial<P>,
@@ -27,7 +44,6 @@ export function normalizeProps<P extends Record<string, unknown>>(
     const definition = def as PropDefinition<unknown, P>;
     let value: unknown;
 
-    // Check for alias
     const aliasKey = definition.alias;
     const hasValue = key in userProps;
     const hasAliasValue = aliasKey && aliasKey in userProps;
@@ -37,17 +53,14 @@ export function normalizeProps<P extends Record<string, unknown>>(
     } else if (hasAliasValue) {
       value = userProps[aliasKey as keyof P];
     } else if (definition.value) {
-      // Computed value
       value = definition.value(context);
     } else if (definition.default !== undefined) {
-      // Default value
       value =
         typeof definition.default === 'function'
           ? (definition.default as (ctx: PropContext<P>) => unknown)(context)
           : definition.default;
     }
 
-    // Apply decorator if present
     if (value !== undefined && definition.decorate) {
       value = definition.decorate({ value, props: result as P });
     }
@@ -59,7 +72,14 @@ export function normalizeProps<P extends Record<string, unknown>>(
 }
 
 /**
- * Validate props against their definitions
+ * Validates props against their definitions.
+ *
+ * @typeParam P - The props type
+ * @param props - Props to validate
+ * @param definitions - Prop definitions to validate against
+ * @throws Error if a required prop is missing or type is invalid
+ *
+ * @public
  */
 export function validateProps<P extends Record<string, unknown>>(
   props: P,
@@ -74,22 +94,18 @@ export function validateProps<P extends Record<string, unknown>>(
     const definition = def as PropDefinition<unknown, P>;
     const value = props[key as keyof P];
 
-    // Check required
     if (definition.required && value === undefined) {
       throw new Error(`Prop "${key}" is required but was not provided`);
     }
 
-    // Skip validation if undefined and not required
     if (value === undefined) continue;
 
-    // Type validation
     if (!validateType(value, definition.type)) {
       throw new Error(
         `Prop "${key}" expected type "${definition.type}" but got "${typeof value}"`
       );
     }
 
-    // Custom validation
     if (definition.validate) {
       definition.validate({ value, props });
     }
@@ -97,7 +113,8 @@ export function validateProps<P extends Record<string, unknown>>(
 }
 
 /**
- * Validate a value against a prop type
+ * Validates a value against a prop type.
+ * @internal
  */
 function validateType(value: unknown, type: string): boolean {
   switch (type) {
@@ -119,7 +136,19 @@ function validateType(value: unknown, type: string): boolean {
 }
 
 /**
- * Filter props for sending to child based on definitions
+ * Filters props for sending to the child component.
+ *
+ * @remarks
+ * Respects sendToChild, sameDomain, and trustedDomains settings.
+ *
+ * @typeParam P - The props type
+ * @param props - All props
+ * @param definitions - Prop definitions
+ * @param childDomain - The child's domain
+ * @param isSameDomain - Whether child is same domain as parent
+ * @returns Filtered props for the child
+ *
+ * @public
  */
 export function getPropsForChild<P extends Record<string, unknown>>(
   props: P,
@@ -138,19 +167,14 @@ export function getPropsForChild<P extends Record<string, unknown>>(
     const definition = def as PropDefinition<unknown, P>;
     const value = props[key as keyof P];
 
-    // Skip if explicitly not sent to child
     if (definition.sendToChild === false) continue;
-
-    // Skip if same domain only and not same domain
     if (definition.sameDomain && !isSameDomain) continue;
 
-    // Skip if trusted domains don't match
     if (definition.trustedDomains) {
       const trusted = definition.trustedDomains as DomainMatcher;
       if (!matchDomain(trusted, childDomain)) continue;
     }
 
-    // Apply child decoration if present
     let finalValue = value;
     if (definition.childDecorate && value !== undefined) {
       finalValue = definition.childDecorate({ value, props }) as P[keyof P];
@@ -163,7 +187,14 @@ export function getPropsForChild<P extends Record<string, unknown>>(
 }
 
 /**
- * Build URL query parameters from props
+ * Builds URL query parameters from props with queryParam option.
+ *
+ * @typeParam P - The props type
+ * @param props - Props to convert
+ * @param definitions - Prop definitions
+ * @returns URLSearchParams with query parameters
+ *
+ * @public
  */
 export function propsToQueryParams<P extends Record<string, unknown>>(
   props: P,
@@ -180,18 +211,12 @@ export function propsToQueryParams<P extends Record<string, unknown>>(
     const value = props[key as keyof P];
 
     if (value === undefined) continue;
-
-    // Skip functions - they can't be query params
     if (definition.type === PROP_TYPE.FUNCTION) continue;
-
-    // Check if this prop should be a query param
     if (!definition.queryParam) continue;
 
-    // Get param name (could be custom)
     const paramName =
       typeof definition.queryParam === 'string' ? definition.queryParam : key;
 
-    // Get param value
     let paramValue: string;
     if (typeof definition.queryParam === 'function') {
       paramValue = definition.queryParam({ value });

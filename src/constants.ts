@@ -1,92 +1,216 @@
 /**
- * Prop type constants for defining component props
+ * Prop type constants for defining component props.
+ *
+ * @remarks
+ * These constants define the valid types for props passed between parent and child components.
+ * Use these when defining prop definitions in your component configuration.
+ *
+ * @example
+ * ```typescript
+ * const MyComponent = ForgeFrame.create({
+ *   tag: 'my-component',
+ *   url: '/component.html',
+ *   props: {
+ *     name: { type: PROP_TYPE.STRING },
+ *     count: { type: PROP_TYPE.NUMBER },
+ *     onSubmit: { type: PROP_TYPE.FUNCTION },
+ *   },
+ * });
+ * ```
+ *
+ * @public
  */
 export const PROP_TYPE = {
+  /** String prop type */
   STRING: 'string',
+  /** Object prop type */
   OBJECT: 'object',
+  /** Function prop type - serialized for cross-domain calls */
   FUNCTION: 'function',
+  /** Boolean prop type */
   BOOLEAN: 'boolean',
+  /** Number prop type */
   NUMBER: 'number',
+  /** Array prop type */
   ARRAY: 'array',
 } as const;
 
+/**
+ * Union type of all valid prop types.
+ * @public
+ */
 export type PropType = (typeof PROP_TYPE)[keyof typeof PROP_TYPE];
 
 /**
- * Rendering context types
+ * Rendering context types for components.
+ *
+ * @remarks
+ * Components can be rendered as either iframes or popups.
+ * The context determines how the child window is created and managed.
+ *
+ * @public
  */
 export const CONTEXT = {
+  /** Render component in an iframe */
   IFRAME: 'iframe',
+  /** Render component in a popup window */
   POPUP: 'popup',
 } as const;
 
+/**
+ * Union type of valid rendering contexts.
+ * @public
+ */
 export type ContextType = (typeof CONTEXT)[keyof typeof CONTEXT];
 
 /**
- * Component lifecycle events
+ * Component lifecycle event names.
+ *
+ * @remarks
+ * These events are emitted during the component lifecycle and can be
+ * listened to via `instance.event.on(EVENT.RENDERED, handler)`.
+ *
+ * @example
+ * ```typescript
+ * const instance = MyComponent({ prop: 'value' });
+ * instance.event.on(EVENT.RENDERED, () => {
+ *   console.log('Component is ready!');
+ * });
+ * instance.render('#container');
+ * ```
+ *
+ * @public
  */
 export const EVENT = {
+  /** Emitted when rendering starts */
   RENDER: 'render',
+  /** Emitted when component is fully rendered and initialized */
   RENDERED: 'rendered',
+  /** Emitted when prerender (loading) phase starts */
   PRERENDER: 'prerender',
+  /** Emitted when prerender phase completes */
   PRERENDERED: 'prerendered',
+  /** Emitted when component becomes visible */
   DISPLAY: 'display',
+  /** Emitted when an error occurs */
   ERROR: 'error',
+  /** Emitted when component is closing */
   CLOSE: 'close',
+  /** Emitted when component is destroyed */
   DESTROY: 'destroy',
+  /** Emitted when props are updated */
   PROPS: 'props',
+  /** Emitted when component is resized */
   RESIZE: 'resize',
+  /** Emitted when component receives focus */
   FOCUS: 'focus',
 } as const;
 
+/**
+ * Union type of valid event names.
+ * @public
+ */
 export type EventType = (typeof EVENT)[keyof typeof EVENT];
 
 /**
- * Prop serialization strategies
+ * Prop serialization strategies for cross-domain transfer.
+ *
+ * @remarks
+ * When props are passed from parent to child across domains, they need to be
+ * serialized. Different strategies offer different trade-offs.
+ *
+ * @public
  */
 export const PROP_SERIALIZATION = {
+  /** Default JSON serialization */
   JSON: 'json',
+  /** Base64 encoding for binary or large data */
   BASE64: 'base64',
+  /** Dot notation for nested objects (e.g., "a.b.c=value") */
+  DOTIFY: 'dotify',
 } as const;
 
+/**
+ * Union type of valid serialization strategies.
+ * @public
+ */
 export type SerializationType =
   (typeof PROP_SERIALIZATION)[keyof typeof PROP_SERIALIZATION];
 
 /**
- * Internal message types for cross-domain communication
+ * Internal message types for the cross-domain communication protocol.
+ * @internal
  */
 export const MESSAGE_TYPE = {
+  /** Request message expecting a response */
   REQUEST: 'request',
+  /** Response to a previous request */
   RESPONSE: 'response',
+  /** Acknowledgment message */
   ACK: 'ack',
 } as const;
 
+/**
+ * Union type of valid message types.
+ * @internal
+ */
 export type MessageType = (typeof MESSAGE_TYPE)[keyof typeof MESSAGE_TYPE];
 
 /**
- * Message names for parent-child communication protocol
+ * Message names for the parent-child communication protocol.
+ *
+ * @remarks
+ * These are the internal message identifiers used by the postMessage protocol.
+ * Each message type corresponds to a specific action in the component lifecycle.
+ *
+ * @internal
  */
 export const MESSAGE_NAME = {
+  /** Child initialization complete */
   INIT: 'forgeframe_init',
+  /** Props update from parent to child */
   PROPS: 'forgeframe_props',
+  /** Close request from child */
   CLOSE: 'forgeframe_close',
+  /** Resize request from child */
   RESIZE: 'forgeframe_resize',
+  /** Focus request from child */
   FOCUS: 'forgeframe_focus',
+  /** Show request from child */
   SHOW: 'forgeframe_show',
+  /** Hide request from child */
   HIDE: 'forgeframe_hide',
+  /** Error report from child */
   ERROR: 'forgeframe_error',
+  /** Data export from child to parent */
   EXPORT: 'forgeframe_export',
+  /** Cross-domain function call */
   CALL: 'forgeframe_call',
+  /** Parent export from child context */
+  PARENT_EXPORT: 'forgeframe_parent_export',
+  /** Get sibling components request */
+  GET_SIBLINGS: 'forgeframe_get_siblings',
 } as const;
 
+/**
+ * Union type of valid message names.
+ * @internal
+ */
 export type MessageName = (typeof MESSAGE_NAME)[keyof typeof MESSAGE_NAME];
 
 /**
- * Window name prefix for identifying ForgeFrame windows
+ * Window name prefix for identifying ForgeFrame child windows.
+ *
+ * @remarks
+ * This prefix is prepended to the base64-encoded payload in `window.name`
+ * to identify windows created by ForgeFrame.
+ *
+ * @internal
  */
 export const WINDOW_NAME_PREFIX = '__forgeframe__';
 
 /**
- * Library version
+ * Current library version.
+ * @public
  */
 export const VERSION = '1.0.0';
