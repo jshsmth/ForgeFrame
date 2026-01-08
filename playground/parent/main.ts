@@ -10,7 +10,7 @@ import ForgeFrame from '../../src';
 // Playground UI Helpers (not part of ForgeFrame API)
 // ============================================================================
 
-type RenderMode = 'iframe' | 'modal' | 'popup';
+type RenderMode = 'embedded' | 'modal' | 'popup';
 
 function log(message: string, type: 'default' | 'error' | 'success' | 'info' = 'default') {
   const logEl = document.getElementById('log');
@@ -22,16 +22,6 @@ function log(message: string, type: 'default' | 'error' | 'success' | 'info' = '
     logEl.scrollTop = logEl.scrollHeight;
   }
   console.log(message);
-}
-
-function showModal() {
-  document.getElementById('modal-overlay')?.classList.add('active');
-}
-
-function hideModal() {
-  document.getElementById('modal-overlay')?.classList.remove('active');
-  const container = document.getElementById('modal-container');
-  if (container) container.innerHTML = '';
 }
 
 function setStatus(status: string) {
@@ -132,7 +122,8 @@ const GreeterComponent = ForgeFrame.create<GreeterProps>({
 
 let instance: ReturnType<typeof GreeterComponent> | null = null;
 let currentCount = 0;
-let currentMode: RenderMode = 'iframe';
+let currentMode: RenderMode = 'embedded';
+let modalOverlay: HTMLElement | null = null;
 
 // ============================================================================
 // Event Handlers
@@ -146,21 +137,132 @@ document.getElementById('btn-render')?.addEventListener('click', async () => {
   }
 
   // Get settings from UI
-  currentMode = (document.getElementById('context-select') as HTMLSelectElement)?.value as RenderMode || 'iframe';
+  currentMode = (document.getElementById('context-select') as HTMLSelectElement)?.value as RenderMode || 'embedded';
   const name = (document.getElementById('input-name') as HTMLInputElement)?.value || 'World';
   const context = currentMode === 'popup' ? 'popup' : 'iframe';
-  const container = currentMode === 'modal' ? '#modal-container' : '#component-container';
 
   log(`Rendering as ${currentMode}...`, 'info');
   setStatus('Rendering...');
   setContext(currentMode);
 
-  if (currentMode === 'modal') {
-    showModal();
-  }
+  // For modal mode, create a component with modal containerTemplate
+  // This demonstrates how ForgeFrame handles modal rendering via templates
+  const Component = currentMode === 'modal'
+    ? ForgeFrame.create<GreeterProps>({
+        tag: 'greeter-component-modal',
+        url: 'https://localhost:5174/',
+        dimensions: { width: 500, height: 400 },
+        style: {
+          border: 'none',
+          borderRadius: '0 0 8px 8px',
+        },
+        containerTemplate: ({ doc, frame, prerenderFrame, close, uid }) => {
+          // Create modal overlay
+          const overlay = doc.createElement('div');
+          overlay.id = `forgeframe-modal-${uid}`;
+          Object.assign(overlay.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            right: '0',
+            bottom: '0',
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: '1000',
+          });
+
+          // Close on backdrop click
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
+          });
+
+          // Create modal container
+          const modal = doc.createElement('div');
+          Object.assign(modal.style, {
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            overflow: 'hidden',
+          });
+
+          // Create modal header
+          const header = doc.createElement('div');
+          Object.assign(header.style, {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '0.75rem 1rem',
+            background: '#f8f9fa',
+            borderBottom: '1px solid #e0e0e0',
+          });
+
+          const title = doc.createElement('h4');
+          title.textContent = 'ForgeFrame Component';
+          Object.assign(title.style, {
+            margin: '0',
+            fontSize: '0.875rem',
+            color: '#333',
+          });
+
+          const closeBtn = doc.createElement('button');
+          closeBtn.innerHTML = '&times;';
+          Object.assign(closeBtn.style, {
+            background: 'none',
+            border: 'none',
+            fontSize: '1.25rem',
+            cursor: 'pointer',
+            color: '#666',
+            padding: '0.25rem',
+            lineHeight: '1',
+          });
+          closeBtn.addEventListener('click', () => close());
+
+          header.appendChild(title);
+          header.appendChild(closeBtn);
+
+          // Create modal body and place the frame elements (zoid-style)
+          const body = doc.createElement('div');
+          Object.assign(body.style, {
+            width: '500px',
+            height: '400px',
+            position: 'relative',
+          });
+
+          // Place prerender element first (will be swapped out when iframe loads)
+          if (prerenderFrame) {
+            body.appendChild(prerenderFrame);
+          }
+
+          // Place the iframe (hidden initially, shown after load)
+          if (frame) {
+            body.appendChild(frame);
+          }
+
+          // Build the structure
+          modal.appendChild(header);
+          modal.appendChild(body);
+          overlay.appendChild(modal);
+
+          // Store reference for cleanup
+          modalOverlay = overlay;
+
+          // Return the overlay - ForgeFrame will append it to the container
+          return overlay;
+        },
+        props: {
+          name: { type: ForgeFrame.PROP_TYPE.STRING, required: true },
+          count: { type: ForgeFrame.PROP_TYPE.NUMBER, default: 0 },
+          onGreet: { type: ForgeFrame.PROP_TYPE.FUNCTION },
+          onClose: { type: ForgeFrame.PROP_TYPE.FUNCTION },
+          onError: { type: ForgeFrame.PROP_TYPE.FUNCTION },
+        },
+      })
+    : GreeterComponent;
 
   // Create component instance with props
-  instance = GreeterComponent({
+  instance = Component({
     name,
     count: currentCount,
     onGreet: (message) => {
@@ -186,12 +288,20 @@ document.getElementById('btn-render')?.addEventListener('click', async () => {
     setButtonsEnabled(false);
     setExports('-');
     setGreeting('-');
-    if (currentMode === 'modal') hideModal();
+
+    // Clean up modal overlay if present
+    if (modalOverlay) {
+      modalOverlay.remove();
+      modalOverlay = null;
+    }
   });
   instance.event.on('error', (err) => log(`Error: ${err}`, 'error'));
   instance.event.on('resize', (dims) => log(`Resized: ${JSON.stringify(dims)}`, 'info'));
 
   // Render the component
+  // Modal mode renders to body (overlay covers page), others to container
+  const container = currentMode === 'modal' ? document.body : '#component-container';
+
   try {
     await instance.render(container, context);
     setStatus('Rendered');
@@ -203,7 +313,6 @@ document.getElementById('btn-render')?.addEventListener('click', async () => {
     log(`Render failed: ${err}`, 'error');
     setStatus('Failed');
     instance = null;
-    if (currentMode === 'modal') hideModal();
   }
 });
 
@@ -237,12 +346,6 @@ document.getElementById('btn-resize')?.addEventListener('click', async () => {
   const height = parseInt((document.getElementById('input-height') as HTMLInputElement)?.value) || 420;
   log(`Resizing to ${height}px`, 'info');
   await instance.resize({ height });
-});
-
-// Modal controls
-document.getElementById('modal-close')?.addEventListener('click', () => instance?.close());
-document.getElementById('modal-overlay')?.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) instance?.close();
 });
 
 // ============================================================================

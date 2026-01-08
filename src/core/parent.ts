@@ -9,7 +9,7 @@
 
 import type {
   ComponentOptions,
-  ZoidComponentInstance,
+  ForgeFrameComponentInstance,
   Dimensions,
   PropsDefinition,
   TemplateContext,
@@ -17,7 +17,7 @@ import type {
   SiblingInfo,
   GetSiblingsOptions,
   ChildComponentRef,
-  ZoidComponent,
+  ForgeFrameComponent,
 } from '../types';
 import type { ContextType } from '../constants';
 import { CONTEXT, EVENT, MESSAGE_NAME } from '../constants';
@@ -42,7 +42,6 @@ import {
   propsToQueryParams,
 } from '../props';
 import {
-  createIframe,
   destroyIframe,
   resizeIframe,
   showIframe,
@@ -106,7 +105,7 @@ interface NormalizedOptions<P> {
  * @public
  */
 export class ParentComponent<P extends Record<string, unknown>, X = unknown>
-  implements ZoidComponentInstance<P, X>
+  implements ForgeFrameComponentInstance<P, X>
 {
   /** Event emitter for lifecycle events. */
   public event: EventEmitter;
@@ -400,7 +399,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
    *
    * @returns A new unrendered component instance with identical configuration
    */
-  clone(): ZoidComponentInstance<P, X> {
+  clone(): ForgeFrameComponentInstance<P, X> {
     return new ParentComponent(this.options, this.props);
   }
 
@@ -491,7 +490,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   private async prerender(): Promise<void> {
     if (!this.container) return;
 
-    const templateFn =
+    const prerenderTemplateFn =
       this.options.prerenderTemplate ?? defaultPrerenderTemplate;
     const containerTemplateFn =
       this.options.containerTemplate ?? defaultContainerTemplate;
@@ -499,6 +498,34 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     const dimensions = this.options.dimensions;
     const cspNonce = (this.props as Record<string, unknown>).cspNonce as string | undefined;
 
+    // Pre-create iframe element for iframe context (zoid-style)
+    // This allows containerTemplate to place it anywhere in the DOM
+    // We set the window name now (carries payload) but not src (loads content)
+    if (this.context === CONTEXT.IFRAME) {
+      const windowName = this.buildWindowName();
+      this.iframe = this.createIframeElement(windowName);
+      hideIframe(this.iframe);
+    }
+
+    // Create prerender element
+    const prerenderContext: TemplateContext<P> & { cspNonce?: string } = {
+      uid: this.uid,
+      tag: this.options.tag,
+      context: this.context,
+      dimensions,
+      props: this.props,
+      doc: document,
+      container: this.container,
+      frame: this.iframe,
+      prerenderFrame: null,
+      close: () => this.close(),
+      focus: () => this.focus(),
+      cspNonce,
+    };
+
+    this.prerenderElement = prerenderTemplateFn(prerenderContext);
+
+    // Create template context with pre-created frame elements
     const templateContext: TemplateContext<P> & { cspNonce?: string } = {
       uid: this.uid,
       tag: this.options.tag,
@@ -507,23 +534,92 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       props: this.props,
       doc: document,
       container: this.container,
-      frame: null,
-      prerenderFrame: null,
+      frame: this.iframe,
+      prerenderFrame: this.prerenderElement,
       close: () => this.close(),
       focus: () => this.focus(),
       cspNonce,
     };
 
+    // Call containerTemplate - it's responsible for placing frame and prerenderFrame
     const containerEl = containerTemplateFn(templateContext);
     if (containerEl) {
       this.container.appendChild(containerEl);
       this.container = containerEl;
     }
 
-    this.prerenderElement = templateFn(templateContext);
-    if (this.prerenderElement) {
+    // If containerTemplate didn't place the elements, append them to container
+    // This maintains backwards compatibility with simple templates
+    if (this.prerenderElement && !this.prerenderElement.parentNode) {
       this.container.appendChild(this.prerenderElement);
     }
+    if (this.iframe && !this.iframe.parentNode) {
+      this.container.appendChild(this.iframe);
+    }
+  }
+
+  /**
+   * Creates an iframe element without setting src (for prerender phase).
+   * The window name is set immediately as it carries the payload for the child.
+   * @internal
+   */
+  private createIframeElement(windowName: string): HTMLIFrameElement {
+    const iframe = document.createElement('iframe');
+    const dimensions = this.options.dimensions;
+    const attributes = typeof this.options.attributes === 'function'
+      ? this.options.attributes(this.props)
+      : this.options.attributes ?? {};
+    const style = typeof this.options.style === 'function'
+      ? this.options.style(this.props)
+      : this.options.style ?? {};
+
+    // Set name first - carries the payload that child reads from window.name
+    iframe.name = windowName;
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allowtransparency', 'true');
+    iframe.setAttribute('scrolling', 'auto');
+
+    // Apply dimensions
+    if (dimensions.width !== undefined) {
+      iframe.style.width = typeof dimensions.width === 'number'
+        ? `${dimensions.width}px`
+        : dimensions.width;
+    }
+    if (dimensions.height !== undefined) {
+      iframe.style.height = typeof dimensions.height === 'number'
+        ? `${dimensions.height}px`
+        : dimensions.height;
+    }
+
+    // Apply HTML attributes
+    for (const [key, value] of Object.entries(attributes)) {
+      if (value === undefined) continue;
+      if (typeof value === 'boolean') {
+        if (value) iframe.setAttribute(key, '');
+      } else {
+        iframe.setAttribute(key, value);
+      }
+    }
+
+    // Apply CSS styles
+    for (const [key, value] of Object.entries(style)) {
+      if (value === undefined) continue;
+      const cssValue = typeof value === 'number' ? `${value}px` : value;
+      iframe.style.setProperty(
+        key.replace(/([A-Z])/g, '-$1').toLowerCase(),
+        String(cssValue)
+      );
+    }
+
+    // Default sandbox if not specified
+    if (!attributes.sandbox) {
+      iframe.setAttribute(
+        'sandbox',
+        'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox'
+      );
+    }
+
+    return iframe;
   }
 
   /**
@@ -532,29 +628,18 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
    */
   private async open(): Promise<void> {
     const url = this.buildUrl();
-    const windowName = this.buildWindowName();
 
     if (this.context === CONTEXT.IFRAME) {
-      this.iframe = createIframe({
-        url,
-        name: windowName,
-        container: this.container!,
-        dimensions: this.options.dimensions,
-        attributes:
-          typeof this.options.attributes === 'function'
-            ? this.options.attributes(this.props)
-            : this.options.attributes,
-        style:
-          typeof this.options.style === 'function'
-            ? this.options.style(this.props)
-            : this.options.style,
-      });
+      // Iframe was pre-created in prerender() with name already set
+      // Now just set src to start loading content
+      if (!this.iframe) {
+        throw new Error('Iframe not created during prerender');
+      }
 
-      // Hide initially (will show after prerender swap)
-      hideIframe(this.iframe);
-
+      this.iframe.src = url;
       this.childWindow = this.iframe.contentWindow;
     } else {
+      const windowName = this.buildWindowName();
       this.childWindow = openPopup({
         url,
         name: windowName,
@@ -636,7 +721,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     const refs: Record<string, ChildComponentRef> = {};
 
     for (const [name, component] of Object.entries(childComponents)) {
-      const componentAny = component as ZoidComponent & {
+      const componentAny = component as ForgeFrameComponent & {
         _options?: ComponentOptions<Record<string, unknown>>;
         tag?: string;
         url?: string | ((props: Record<string, unknown>) => string);

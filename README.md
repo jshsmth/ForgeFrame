@@ -1,15 +1,37 @@
 # ForgeFrame
 
-A modern, TypeScript-first cross-domain iframe/popup component framework. A minimal alternative to [zoid](https://github.com/krakenjs/zoid) with zero dependencies.
+A modern, TypeScript-first cross-domain component framework for embedding iframes and popups with seamless communication. Zero dependencies, ~15KB gzipped.
 
-## Features
+## Why ForgeFrame?
 
-- **Zero Dependencies** - No external runtime dependencies
-- **TypeScript First** - Full type safety out of the box
-- **API Compatible** - Similar API to zoid for easy migration
-- **Modern** - Uses ES2022+ features, native Promises
-- **Small Bundle** - ~15KB gzipped
-- **React Driver** - Optional React integration included
+ForgeFrame lets you embed components from different domains while passing data and callbacks seamlessly - something iframes alone can't do elegantly. Perfect for:
+
+- **Payment forms** - Embed secure payment fields from a payment provider
+- **Authentication widgets** - Login forms hosted on your auth domain
+- **Third-party integrations** - Embed partner components in your app
+- **Micro-frontends** - Isolated components across different teams/domains
+
+---
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Step-by-Step Guide](#step-by-step-guide)
+  - [1. Define a Component](#1-define-a-component-parent)
+  - [2. Create the Child Page](#2-create-the-child-page)
+  - [3. Render the Component](#3-render-the-component)
+  - [4. Handle Events](#4-handle-events)
+- [Props System](#props-system)
+- [Child Window API (xprops)](#child-window-api-xprops)
+- [Templates](#templates)
+- [React Integration](#react-integration)
+- [Advanced Features](#advanced-features)
+- [API Reference](#api-reference)
+- [TypeScript](#typescript)
+- [Browser Support](#browser-support)
+
+---
 
 ## Installation
 
@@ -17,454 +39,320 @@ A modern, TypeScript-first cross-domain iframe/popup component framework. A mini
 npm install forgeframe
 ```
 
+```bash
+yarn add forgeframe
+```
+
+```bash
+pnpm add forgeframe
+```
+
+---
+
 ## Quick Start
 
-### Parent Page (host)
+### Parent Page (your app)
 
 ```typescript
 import ForgeFrame from 'forgeframe';
 
-// Define a component
-const LoginComponent = ForgeFrame.create({
-  tag: 'login-component',
-  url: 'https://auth.example.com/login',
-  props: {
-    email: { type: ForgeFrame.PROP_TYPE.STRING },
-    onLogin: { type: ForgeFrame.PROP_TYPE.FUNCTION },
-  },
+// 1. Define the component
+const PaymentForm = ForgeFrame.create({
+  tag: 'payment-form',
+  url: 'https://payments.example.com/form',
   dimensions: { width: 400, height: 300 },
-});
-
-// Render it
-const instance = LoginComponent({
-  email: 'user@example.com',
-  onLogin: (user) => {
-    console.log('User logged in:', user);
+  props: {
+    amount: { type: ForgeFrame.PROP_TYPE.NUMBER },
+    onSuccess: { type: ForgeFrame.PROP_TYPE.FUNCTION },
   },
 });
 
-await instance.render('#container');
+// 2. Create instance and render
+const payment = PaymentForm({
+  amount: 99.99,
+  onSuccess: (txn) => console.log('Payment complete:', txn),
+});
+
+await payment.render('#payment-container');
 ```
 
-### Child Page (embedded)
+### Child Page (embedded iframe)
 
 ```typescript
-import ForgeFrame, { type ChildProps } from 'forgeframe';
+// The child automatically receives props via window.xprops
+const { amount, onSuccess, close } = window.xprops;
 
-// Define your custom props interface
-interface MyProps {
-  email: string;
-  onLogin: (user: { id: number; name: string }) => void;
-}
-
-// Type window.xprops using ChildProps<MyProps>
-declare global {
-  interface Window {
-    xprops?: ChildProps<MyProps>;
-  }
-}
-
-// Now window.xprops is fully typed with your props + ForgeFrame built-ins
-const { email, onLogin, close, resize, parent, getSiblings } = window.xprops!;
-
-// Use the passed props (typed!)
-console.log('Email:', email);
+// Use the props
+document.getElementById('total').textContent = `$${amount}`;
 
 // Call parent callbacks
-await onLogin({ id: 1, name: 'John' });
-
-// Control the frame (built-in methods)
-await resize({ width: 500, height: 400 });
-await close();
+document.getElementById('pay-btn').onclick = async () => {
+  await onSuccess({ transactionId: 'TXN_123' });
+  await close();
+};
 ```
+
+That's it! ForgeFrame handles all the cross-domain communication automatically.
 
 ---
 
-## API Reference
+## Step-by-Step Guide
 
-### Default Export: `ForgeFrame`
+### 1. Define a Component (Parent)
 
-The main ForgeFrame object provides all core functionality:
+Components are defined using `ForgeFrame.create()`. This creates a reusable component factory.
 
 ```typescript
 import ForgeFrame from 'forgeframe';
-```
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `create` | `function` | Create a new component definition |
-| `destroy` | `function` | Destroy a single component instance |
-| `destroyComponents` | `function` | Destroy all instances of a component by tag |
-| `destroyAll` | `function` | Destroy all ForgeFrame component instances |
-| `isChild` | `function` | Check if current window is a child context |
-| `getXProps` | `function` | Get xprops from child window |
-| `PROP_TYPE` | `object` | Prop type constants |
-| `PROP_SERIALIZATION` | `object` | Serialization strategy constants |
-| `CONTEXT` | `object` | Rendering context constants |
-| `EVENT` | `object` | Lifecycle event constants |
-| `PopupOpenError` | `class` | Error thrown when popup fails to open |
-| `VERSION` | `string` | Library version |
+// Define your props interface (TypeScript)
+interface LoginProps {
+  email?: string;
+  onLogin: (user: { id: number; name: string }) => void;
+  onCancel?: () => void;
+}
 
----
+// Create the component
+const LoginForm = ForgeFrame.create<LoginProps>({
+  // Required: unique identifier
+  tag: 'login-form',
 
-### `ForgeFrame.create(options)`
+  // Required: URL of the child page
+  url: 'https://auth.example.com/login',
 
-Creates a new component definition.
+  // Optional: dimensions
+  dimensions: { width: 400, height: 350 },
 
-```typescript
-const MyComponent = ForgeFrame.create<MyProps>({
-  tag: 'my-component',
-  url: 'https://example.com/component',
+  // Optional: prop definitions with types and validation
   props: {
-    name: { type: ForgeFrame.PROP_TYPE.STRING, required: true },
-    onSubmit: { type: ForgeFrame.PROP_TYPE.FUNCTION },
-  },
-  dimensions: { width: 400, height: 300 },
-});
-```
-
-#### `ComponentOptions<P>`
-
-```typescript
-interface ComponentOptions<P> {
-  // Required
-  tag: string;                              // Unique component identifier (lowercase, hyphens allowed)
-  url: string | ((props: P) => string);     // URL of the child page
-
-  // Optional
-  props?: PropsDefinition<P>;               // Prop type definitions
-  dimensions?: Dimensions | ((props: P) => Dimensions);  // Default size
-  defaultContext?: 'iframe' | 'popup';      // Default: 'iframe'
-  timeout?: number;                         // Init timeout in ms (default: 10000)
-
-  // Security
-  domain?: DomainMatcher;                   // Allowed child domains
-  allowedParentDomains?: DomainMatcher;     // Restrict parent domains
-
-  // Auto-resize
-  autoResize?: AutoResizeOptions;           // { width?: boolean, height?: boolean, element?: string }
-
-  // Templates
-  containerTemplate?: ContainerTemplate<P>; // Custom container element
-  prerenderTemplate?: PrerenderTemplate<P>; // Custom loading element
-
-  // Validation
-  eligible?: (opts: { props: P }) => EligibilityResult;
-  validate?: (opts: { props: P }) => void;
-
-  // Iframe attributes
-  attributes?: IframeAttributes | ((props: P) => IframeAttributes);
-
-  // Nested components
-  children?: (props: { props: P }) => Record<string, ZoidComponent>;
-}
-```
-
----
-
-### `ForgeFrame.destroy(instance)`
-
-Destroys a single component instance.
-
-```typescript
-const instance = MyComponent({ name: 'test' });
-await instance.render('#container');
-
-// Later...
-await ForgeFrame.destroy(instance);
-```
-
----
-
-### `ForgeFrame.destroyComponents(tag)`
-
-Destroys all instances of a specific component.
-
-```typescript
-await ForgeFrame.destroyComponents('my-component');
-```
-
----
-
-### `ForgeFrame.destroyAll()`
-
-Destroys all ForgeFrame component instances.
-
-```typescript
-// Clean up on page unload
-window.addEventListener('beforeunload', () => {
-  ForgeFrame.destroyAll();
-});
-```
-
----
-
-### `ForgeFrame.isChild()`
-
-Checks if the current window is running inside a ForgeFrame iframe/popup.
-
-```typescript
-if (ForgeFrame.isChild()) {
-  console.log('Running in ForgeFrame child context');
-}
-```
-
----
-
-### `ForgeFrame.getXProps<P>()`
-
-Gets the xprops object from the child window.
-
-```typescript
-const xprops = ForgeFrame.getXProps<MyProps>();
-if (xprops) {
-  console.log('Props:', xprops);
-}
-```
-
----
-
-## Constants
-
-### `ForgeFrame.PROP_TYPE`
-
-Prop type constants for defining component props.
-
-```typescript
-ForgeFrame.PROP_TYPE.STRING    // 'string'
-ForgeFrame.PROP_TYPE.NUMBER    // 'number'
-ForgeFrame.PROP_TYPE.BOOLEAN   // 'boolean'
-ForgeFrame.PROP_TYPE.FUNCTION  // 'function' (serialized for cross-domain)
-ForgeFrame.PROP_TYPE.OBJECT    // 'object'
-ForgeFrame.PROP_TYPE.ARRAY     // 'array'
-```
-
-### `ForgeFrame.PROP_SERIALIZATION`
-
-Serialization strategies for cross-domain prop transfer.
-
-```typescript
-ForgeFrame.PROP_SERIALIZATION.JSON     // Default JSON serialization
-ForgeFrame.PROP_SERIALIZATION.BASE64   // Base64 encoding for binary/large data
-ForgeFrame.PROP_SERIALIZATION.DOTIFY   // Dot notation (e.g., "a.b.c=value")
-```
-
-### `ForgeFrame.CONTEXT`
-
-Rendering context types.
-
-```typescript
-ForgeFrame.CONTEXT.IFRAME  // 'iframe'
-ForgeFrame.CONTEXT.POPUP   // 'popup'
-```
-
-### `ForgeFrame.EVENT`
-
-Lifecycle event names for subscribing via `instance.event.on()`.
-
-```typescript
-ForgeFrame.EVENT.RENDER       // Rendering started
-ForgeFrame.EVENT.RENDERED     // Component fully rendered
-ForgeFrame.EVENT.PRERENDER    // Prerender started
-ForgeFrame.EVENT.PRERENDERED  // Prerender complete
-ForgeFrame.EVENT.DISPLAY      // Component visible
-ForgeFrame.EVENT.ERROR        // Error occurred
-ForgeFrame.EVENT.CLOSE        // Component closing
-ForgeFrame.EVENT.DESTROY      // Component destroyed
-ForgeFrame.EVENT.PROPS        // Props updated
-ForgeFrame.EVENT.RESIZE       // Size changed
-ForgeFrame.EVENT.FOCUS        // Component focused
-```
-
----
-
-## Prop Definition
-
-Define individual props with type checking, validation, and serialization options.
-
-```typescript
-interface PropDefinition<T, P = Record<string, unknown>> {
-  // Type & Requirement
-  type: PropType;                    // STRING, NUMBER, BOOLEAN, FUNCTION, OBJECT, ARRAY
-  required?: boolean;                // Whether prop is required
-  default?: T | ((ctx: PropContext<P>) => T);  // Default value
-  value?: (ctx: PropContext<P>) => T;          // Computed value
-
-  // Cross-domain settings
-  sendToChild?: boolean;             // Send to child (default: true)
-  sameDomain?: boolean;              // Only send if same domain
-  trustedDomains?: DomainMatcher[];  // Trusted domains for this prop
-
-  // Serialization
-  serialization?: SerializationType; // JSON, BASE64, or DOTIFY
-  queryParam?: boolean | string | ((opts: { value: T }) => string);
-
-  // Validation & Transformation
-  validate?: (opts: { value: T; props: P }) => void;
-  decorate?: (opts: { value: T; props: P }) => T;      // Transform in parent
-  childDecorate?: (opts: { value: T; props: P }) => T; // Transform in child
-
-  // Aliasing
-  alias?: string;  // Alternative name for the prop
-}
-```
-
-### Example Prop Definitions
-
-```typescript
-const MyComponent = ForgeFrame.create({
-  tag: 'my-component',
-  url: '/component.html',
-  props: {
-    // Simple string prop
-    name: {
+    email: {
       type: ForgeFrame.PROP_TYPE.STRING,
-      required: true,
     },
-
-    // Number with default
-    count: {
-      type: ForgeFrame.PROP_TYPE.NUMBER,
-      default: 0,
-    },
-
-    // Function callback
-    onSubmit: {
+    onLogin: {
       type: ForgeFrame.PROP_TYPE.FUNCTION,
       required: true,
     },
-
-    // Object with custom serialization
-    config: {
-      type: ForgeFrame.PROP_TYPE.OBJECT,
-      serialization: ForgeFrame.PROP_SERIALIZATION.DOTIFY,
-    },
-
-    // Query param prop
-    theme: {
-      type: ForgeFrame.PROP_TYPE.STRING,
-      queryParam: true,  // Adds ?theme=value to URL
-    },
-
-    // Validated prop
-    email: {
-      type: ForgeFrame.PROP_TYPE.STRING,
-      validate: ({ value }) => {
-        if (!value.includes('@')) {
-          throw new Error('Invalid email address');
-        }
-      },
-    },
-
-    // Same-domain only prop
-    secretToken: {
-      type: ForgeFrame.PROP_TYPE.STRING,
-      sameDomain: true,
+    onCancel: {
+      type: ForgeFrame.PROP_TYPE.FUNCTION,
     },
   },
 });
 ```
 
----
+### 2. Create the Child Page
 
-## Component Instance
+The child page runs inside the iframe. It receives props via `window.xprops`.
 
-When you call a component factory, you get a component instance with these methods:
+```html
+<!-- https://auth.example.com/login -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+</head>
+<body>
+  <form id="login-form">
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button type="submit">Login</button>
+    <button type="button" id="cancel">Cancel</button>
+  </form>
 
-```typescript
-const instance = MyComponent({ name: 'World' });
+  <script type="module">
+    // window.xprops is automatically available in ForgeFrame children
+    const { email, onLogin, onCancel, close } = window.xprops;
+
+    // Pre-fill email if provided
+    if (email) {
+      document.getElementById('email').value = email;
+    }
+
+    // Handle form submission
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+
+      // Call the parent's callback
+      await onLogin({
+        id: 1,
+        name: 'John Doe',
+        email: document.getElementById('email').value,
+      });
+
+      // Close the component
+      await close();
+    };
+
+    // Handle cancel
+    document.getElementById('cancel').onclick = async () => {
+      await onCancel?.();
+      await close();
+    };
+  </script>
+</body>
+</html>
 ```
 
-### Instance Methods
+### 3. Render the Component
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `render` | `(container?, context?) => Promise<void>` | Render into a container |
-| `renderTo` | `(win, container?, context?) => Promise<void>` | Render into another window |
-| `close` | `() => Promise<void>` | Close and destroy |
-| `focus` | `() => Promise<void>` | Focus the component |
-| `resize` | `(dimensions) => Promise<void>` | Resize the component |
-| `show` | `() => Promise<void>` | Show if hidden |
-| `hide` | `() => Promise<void>` | Hide the component |
-| `updateProps` | `(props) => Promise<void>` | Update props |
-| `clone` | `() => ZoidComponentInstance` | Clone with same props |
-| `isEligible` | `() => boolean` | Check eligibility |
-
-### Instance Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `uid` | `string` | Unique instance identifier |
-| `event` | `EventEmitterInterface` | Event emitter for lifecycle events |
-| `state` | `Record<string, unknown>` | Mutable state object |
-| `exports` | `X \| undefined` | Data exported by child via `xprops.export()` |
-
-### Example Usage
+Create an instance with props and render it.
 
 ```typescript
-const instance = MyComponent({ name: 'World' });
-
-// Subscribe to events
-instance.event.on('rendered', () => {
-  console.log('Component is ready!');
+// Create an instance with props
+const login = LoginForm({
+  email: 'user@example.com',
+  onLogin: (user) => {
+    console.log('User logged in:', user);
+    // Update your app state, redirect, etc.
+  },
+  onCancel: () => {
+    console.log('Login cancelled');
+  },
 });
 
+// Render into a container (CSS selector or HTMLElement)
+await login.render('#login-container');
+
+// Or render as a popup window
+await login.render(document.body, 'popup');
+```
+
+### 4. Handle Events
+
+Subscribe to lifecycle events for better control.
+
+```typescript
+const instance = LoginForm({ /* props */ });
+
+// Component finished rendering
+instance.event.on('rendered', () => {
+  console.log('Login form is ready');
+});
+
+// Component was closed
+instance.event.on('close', () => {
+  console.log('Login form closed');
+});
+
+// An error occurred
 instance.event.on('error', (err) => {
   console.error('Error:', err);
 });
 
-// Render
+// Component was resized
+instance.event.on('resize', (dimensions) => {
+  console.log('New size:', dimensions);
+});
+
+await instance.render('#container');
+```
+
+**Available Events:**
+
+| Event | Description |
+|-------|-------------|
+| `render` | Rendering started |
+| `rendered` | Fully rendered and initialized |
+| `prerender` | Prerender (loading) started |
+| `prerendered` | Prerender complete |
+| `display` | Component became visible |
+| `close` | Component is closing |
+| `destroy` | Component destroyed |
+| `error` | An error occurred |
+| `props` | Props were updated |
+| `resize` | Component was resized |
+| `focus` | Component received focus |
+
+---
+
+## Props System
+
+### Defining Props
+
+Props define what data can be passed to your component.
+
+```typescript
+const MyComponent = ForgeFrame.create({
+  tag: 'my-component',
+  url: '/component',
+  props: {
+    // Basic types
+    name: { type: ForgeFrame.PROP_TYPE.STRING },
+    count: { type: ForgeFrame.PROP_TYPE.NUMBER },
+    enabled: { type: ForgeFrame.PROP_TYPE.BOOLEAN },
+    config: { type: ForgeFrame.PROP_TYPE.OBJECT },
+    items: { type: ForgeFrame.PROP_TYPE.ARRAY },
+
+    // Functions (automatically serialized for cross-domain calls)
+    onSubmit: { type: ForgeFrame.PROP_TYPE.FUNCTION },
+
+    // Required props
+    userId: {
+      type: ForgeFrame.PROP_TYPE.STRING,
+      required: true,
+    },
+
+    // Default values
+    theme: {
+      type: ForgeFrame.PROP_TYPE.STRING,
+      default: 'light',
+    },
+
+    // Validation
+    email: {
+      type: ForgeFrame.PROP_TYPE.STRING,
+      validate: ({ value }) => {
+        if (!value.includes('@')) {
+          throw new Error('Invalid email');
+        }
+      },
+    },
+
+    // Query parameters (added to URL)
+    locale: {
+      type: ForgeFrame.PROP_TYPE.STRING,
+      queryParam: true,  // Adds ?locale=value to URL
+    },
+
+    // Same-domain only (security)
+    authToken: {
+      type: ForgeFrame.PROP_TYPE.STRING,
+      sameDomain: true,  // Only sent if same origin
+    },
+  },
+});
+```
+
+### Prop Types
+
+| Type | Constant | Description |
+|------|----------|-------------|
+| String | `ForgeFrame.PROP_TYPE.STRING` | Text values |
+| Number | `ForgeFrame.PROP_TYPE.NUMBER` | Numeric values |
+| Boolean | `ForgeFrame.PROP_TYPE.BOOLEAN` | True/false |
+| Object | `ForgeFrame.PROP_TYPE.OBJECT` | Plain objects |
+| Array | `ForgeFrame.PROP_TYPE.ARRAY` | Arrays |
+| Function | `ForgeFrame.PROP_TYPE.FUNCTION` | Callbacks (serialized) |
+
+### Updating Props
+
+Props can be updated after rendering.
+
+```typescript
+const instance = MyComponent({ name: 'Initial' });
 await instance.render('#container');
 
 // Update props
 await instance.updateProps({ name: 'Updated' });
-
-// Resize
-await instance.resize({ width: 600, height: 400 });
-
-// Access exports from child
-console.log('Child exports:', instance.exports);
-
-// Close
-await instance.close();
 ```
 
----
-
-## Component Factory (ZoidComponent)
-
-The return value of `ForgeFrame.create()` is both a callable function and an object with static methods:
+The child receives updates via `onProps`:
 
 ```typescript
-interface ZoidComponent<P, X> {
-  // Call to create instance
-  (props?: P): ZoidComponentInstance<P, X>;
-
-  // Static properties
-  isChild(): boolean;              // Check if in child context
-  xprops?: ChildProps<P>;          // Access xprops in child
-  canRenderTo(win: Window): Promise<boolean>;  // Check render permission
-  instances: ZoidComponentInstance<P, X>[];    // All active instances
-}
-```
-
-### Example
-
-```typescript
-const LoginComponent = ForgeFrame.create({
-  tag: 'login',
-  url: '/login.html',
+// In child
+window.xprops.onProps((newProps) => {
+  console.log('Props updated:', newProps);
+  // Re-render your UI with new props
 });
-
-// Check if we're in child context
-if (LoginComponent.isChild()) {
-  const { email, onLogin } = LoginComponent.xprops!;
-  // ... child logic
-} else {
-  // Parent logic
-  const instance = LoginComponent({ email: 'user@example.com' });
-  await instance.render('#login-container');
-}
 ```
 
 ---
@@ -473,437 +361,491 @@ if (LoginComponent.isChild()) {
 
 In child windows, `window.xprops` provides access to props and control methods.
 
-### Typing `window.xprops` in TypeScript
-
-ForgeFrame exports `ChildProps<P>`, a generic type that combines your custom props with all built-in ForgeFrame methods. Use this to get full type safety in child pages:
+### TypeScript Setup
 
 ```typescript
 import { type ChildProps } from 'forgeframe';
 
-// 1. Define your custom props interface
+// Define your props interface
 interface MyProps {
   email: string;
-  count: number;
-  onSubmit: (data: { success: boolean }) => void;
+  onLogin: (user: { id: number }) => void;
 }
 
-// 2. Declare window.xprops with ChildProps<MyProps>
+// Type window.xprops
 declare global {
   interface Window {
     xprops?: ChildProps<MyProps>;
   }
 }
 
-// 3. Now you get full type safety!
-const xprops = window.xprops!;
-
-xprops.email;      // string (your prop)
-xprops.count;      // number (your prop)
-xprops.onSubmit;   // (data: { success: boolean }) => void (your prop)
-xprops.close;      // () => Promise<void> (built-in)
-xprops.resize;     // (dimensions: Dimensions) => Promise<void> (built-in)
-xprops.uid;        // string (built-in)
+// Now fully typed!
+const { email, onLogin, close, resize } = window.xprops!;
 ```
 
-**Alternative: Using `ForgeFrame.getXProps<P>()`**
-
-You can also use the typed getter function instead of accessing `window.xprops` directly:
+### Available Methods
 
 ```typescript
-import ForgeFrame, { type ChildProps } from 'forgeframe';
+const xprops = window.xprops;
 
-interface MyProps {
-  email: string;
-}
+// Your custom props
+xprops.email;              // Props you defined
+xprops.onLogin(user);      // Callbacks you defined
 
-// Get typed xprops without window declaration
-const xprops = ForgeFrame.getXProps<MyProps>();
-if (xprops) {
-  console.log(xprops.email);  // Typed!
-  await xprops.close();        // Built-in method
-}
+// Built-in identifiers
+xprops.uid;                // Unique instance ID
+xprops.tag;                // Component tag name
+
+// Control methods
+await xprops.close();                          // Close the component
+await xprops.focus();                          // Focus (popup only)
+await xprops.resize({ width: 500, height: 400 }); // Resize
+await xprops.show();                           // Show if hidden
+await xprops.hide();                           // Hide
+
+// Communication
+xprops.onProps((props) => { /* handle updates */ });
+xprops.onError(new Error('Something failed'));
+await xprops.export({ validate: () => true }); // Export to parent
+
+// Parent access
+xprops.getParent();        // Parent window reference
+xprops.getParentDomain();  // Parent origin
+xprops.parent.props;       // Parent's props
+xprops.parent.export(data); // Export to parent component
+
+// Siblings
+const siblings = await xprops.getSiblings();
+```
+
+### Exporting Data to Parent
+
+Child components can export methods/data for the parent to use.
+
+**Child:**
+```typescript
+// Export methods to parent
+window.xprops.export({
+  validate: () => {
+    const form = document.getElementById('form');
+    return form.checkValidity();
+  },
+  getFormData: () => {
+    return { email: document.getElementById('email').value };
+  },
+});
+```
+
+**Parent:**
+```typescript
+const instance = MyComponent({ /* props */ });
+await instance.render('#container');
+
+// Access exports
+console.log(instance.exports);  // { validate: fn, getFormData: fn }
+
+// Call exported methods
+const isValid = await instance.exports.validate();
+const data = await instance.exports.getFormData();
 ```
 
 ---
 
-### `ChildProps<P>`
+## Templates
+
+### Container Template
+
+Customize how the component container is rendered. Perfect for modals.
 
 ```typescript
-interface ChildProps<P> {
-  // Identifiers
-  uid: string;
-  tag: string;
+const ModalComponent = ForgeFrame.create({
+  tag: 'modal',
+  url: '/modal',
+  dimensions: { width: 500, height: 400 },
 
-  // User-defined props
-  ...yourCustomProps;
+  containerTemplate: ({ doc, frame, prerenderFrame, close, uid }) => {
+    // Create overlay
+    const overlay = doc.createElement('div');
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      inset: '0',
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: '1000',
+    });
 
-  // Control methods
-  close: () => Promise<void>;
-  focus: () => Promise<void>;
-  resize: (dimensions: Dimensions) => Promise<void>;
-  show: () => Promise<void>;
-  hide: () => Promise<void>;
+    // Close on backdrop click
+    overlay.onclick = (e) => {
+      if (e.target === overlay) close();
+    };
 
-  // Communication
-  onProps: (handler: (props: P) => void) => { cancel: () => void };
-  onError: (err: Error) => Promise<void>;
-  export: <X>(exports: X) => Promise<void>;
+    // Create modal
+    const modal = doc.createElement('div');
+    Object.assign(modal.style, {
+      background: 'white',
+      borderRadius: '8px',
+      overflow: 'hidden',
+    });
 
-  // Parent access
-  getParent: () => Window;
-  getParentDomain: () => string;
-  parent: ParentNamespace<P>;
+    // Add close button
+    const closeBtn = doc.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.onclick = () => close();
+    modal.appendChild(closeBtn);
 
-  // Sibling discovery
-  getSiblings: (options?: GetSiblingsOptions) => Promise<SiblingInfo[]>;
+    // Add frame elements
+    const body = doc.createElement('div');
+    if (prerenderFrame) body.appendChild(prerenderFrame);
+    if (frame) body.appendChild(frame);
+    modal.appendChild(body);
 
-  // Nested components
-  children?: Record<string, ZoidComponent>;
-}
-```
-
-### Example Child Implementation
-
-```typescript
-// child.html
-const {
-  email,
-  onLogin,
-  close,
-  resize,
-  parent,
-  getSiblings,
-  export: exportData,
-} = window.xprops;
-
-// Use props
-console.log('Email:', email);
-
-// Call parent callback
-document.getElementById('login-btn').onclick = async () => {
-  await onLogin({ id: 1, name: 'John Doe' });
-  await close();
-};
-
-// Subscribe to prop updates
-const subscription = window.xprops.onProps((newProps) => {
-  console.log('Props updated:', newProps);
-});
-
-// Later: subscription.cancel();
-
-// Export data to parent
-exportData({
-  getFormData: () => ({ email: document.getElementById('email').value }),
-});
-
-// Resize based on content
-await resize({ height: document.body.scrollHeight });
-
-// Access parent's props
-console.log('Parent props:', parent.props);
-
-// Get sibling components
-const siblings = await getSiblings();
-console.log('Siblings:', siblings);
-```
-
----
-
-## Parent Namespace
-
-The `parent` property in xprops provides bidirectional communication:
-
-```typescript
-interface ParentNamespace<P> {
-  props: P;                              // Parent's current props
-  export: <T>(data: T) => Promise<void>; // Export to parent
-}
-```
-
-### Example
-
-```typescript
-// Access parent's props from child
-const { parent } = window.xprops;
-console.log('Parent email:', parent.props.email);
-
-// Export data back to parent
-await parent.export({
-  userPreferences: { theme: 'dark' },
+    overlay.appendChild(modal);
+    return overlay;
+  },
 });
 ```
 
----
+### Prerender Template
 
-## Sibling Discovery
-
-Child components can discover sibling instances on the same parent page:
+Customize the loading state shown while the child loads.
 
 ```typescript
-interface SiblingInfo {
-  uid: string;
-  tag: string;
-  exports?: unknown;
-}
+const MyComponent = ForgeFrame.create({
+  tag: 'my-component',
+  url: '/component',
 
-interface GetSiblingsOptions {
-  anyParent?: boolean;  // Get siblings from any parent (default: false)
-}
-```
-
-### Example
-
-```typescript
-// Get siblings with the same tag
-const siblings = await window.xprops.getSiblings();
-
-for (const sibling of siblings) {
-  console.log(`Sibling ${sibling.uid}:`, sibling.exports);
-}
-```
-
----
-
-## Nested Components (Children)
-
-Components can define child components for nested composition:
-
-```typescript
-const ParentComponent = ForgeFrame.create({
-  tag: 'parent-component',
-  url: '/parent.html',
-  children: ({ props }) => ({
-    ChildA: ChildAComponent,
-    ChildB: ChildBComponent,
-  }),
+  prerenderTemplate: ({ doc, dimensions }) => {
+    const loader = doc.createElement('div');
+    loader.innerHTML = `
+      <div style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: ${dimensions.width}px;
+        height: ${dimensions.height}px;
+        background: #f5f5f5;
+      ">
+        <span>Loading...</span>
+      </div>
+    `;
+    return loader.firstElementChild as HTMLElement;
+  },
 });
-
-// In parent.html (child window)
-const { children } = window.xprops;
-const { ChildA, ChildB } = children;
-
-// Render nested component
-ChildA({ nestedProp: 'value' }).render('#nested-container');
 ```
 
 ---
 
 ## React Integration
 
-### `createReactDriver(Component, options)`
+### Basic Usage
 
-Creates a React wrapper component.
-
-```typescript
+```tsx
 import React from 'react';
 import ForgeFrame, { createReactDriver } from 'forgeframe';
 
+// 1. Create ForgeFrame component
 const LoginComponent = ForgeFrame.create({
-  tag: 'login-react',
-  url: 'https://example.com/login',
+  tag: 'login',
+  url: 'https://auth.example.com/login',
+  dimensions: { width: 400, height: 350 },
   props: {
     email: { type: ForgeFrame.PROP_TYPE.STRING },
     onLogin: { type: ForgeFrame.PROP_TYPE.FUNCTION },
   },
 });
 
-const LoginReact = createReactDriver(LoginComponent, { React });
+// 2. Create React wrapper
+const Login = createReactDriver(LoginComponent, { React });
 
+// 3. Use in your app
 function App() {
+  const [user, setUser] = useState(null);
+
   return (
-    <LoginReact
-      email="user@example.com"
-      onLogin={(user) => console.log(user)}
-      onRendered={() => console.log('Ready!')}
-      onError={(err) => console.error(err)}
-      style={{ border: '1px solid #ccc' }}
-      className="login-frame"
-    />
+    <div>
+      <h1>My App</h1>
+
+      <Login
+        email="user@example.com"
+        onLogin={(loggedInUser) => setUser(loggedInUser)}
+        onRendered={() => console.log('Ready')}
+        onError={(err) => console.error(err)}
+        onClose={() => console.log('Closed')}
+        className="login-frame"
+        style={{ border: '1px solid #ccc' }}
+      />
+    </div>
   );
 }
 ```
 
-### `withReactDriver(React)`
+### React Props
 
-Alternative factory pattern for multiple components:
+The React component accepts all your component props plus:
 
-```typescript
+| Prop | Type | Description |
+|------|------|-------------|
+| `onRendered` | `() => void` | Called when component is ready |
+| `onError` | `(err: Error) => void` | Called on error |
+| `onClose` | `() => void` | Called when closed |
+| `context` | `'iframe' \| 'popup'` | Render mode |
+| `className` | `string` | Container CSS class |
+| `style` | `CSSProperties` | Container inline styles |
+
+### Factory Pattern
+
+For multiple components, use `withReactDriver`:
+
+```tsx
 import { withReactDriver } from 'forgeframe';
 
 const createDriver = withReactDriver(React);
 
 const LoginReact = createDriver(LoginComponent);
-const CheckoutReact = createDriver(CheckoutComponent);
+const PaymentReact = createDriver(PaymentComponent);
+const ProfileReact = createDriver(ProfileComponent);
 ```
 
-### React Component Props
+---
+
+## Advanced Features
+
+### Popup Windows
+
+Render as a popup instead of iframe.
 
 ```typescript
-interface ReactComponentProps<P> {
-  // Your component props
-  ...P;
+// Render as popup
+await instance.render('#container', 'popup');
 
-  // Lifecycle callbacks
-  onRendered?: () => void;
-  onError?: (err: Error) => void;
-  onClose?: () => void;
+// Or set as default
+const PopupComponent = ForgeFrame.create({
+  tag: 'popup-component',
+  url: '/popup',
+  defaultContext: 'popup',
+});
+```
 
-  // Container styling
-  style?: React.CSSProperties;
-  className?: string;
+### Auto-Resize
 
-  // Rendering context
-  context?: 'iframe' | 'popup';
+Automatically resize based on child content.
 
-  // Forward ref to container div
-  containerRef?: React.Ref<HTMLDivElement>;
+```typescript
+const AutoResizeComponent = ForgeFrame.create({
+  tag: 'auto-resize',
+  url: '/component',
+  autoResize: {
+    height: true,
+    width: false,
+    element: '.content', // Observe this element
+  },
+});
+```
+
+### Domain Security
+
+Restrict which domains can embed or communicate.
+
+```typescript
+const SecureComponent = ForgeFrame.create({
+  tag: 'secure',
+  url: 'https://secure.example.com/widget',
+
+  // Only allow these parent domains to embed
+  allowedParentDomains: [
+    'https://myapp.com',
+    'https://*.myapp.com',
+    /^https:\/\/.*\.trusted\.com$/,
+  ],
+
+  // Specify the actual domain if URL redirects
+  domain: 'https://secure.example.com',
+});
+```
+
+### Eligibility Checks
+
+Conditionally allow rendering.
+
+```typescript
+const FeatureComponent = ForgeFrame.create({
+  tag: 'feature',
+  url: '/feature',
+
+  eligible: ({ props }) => {
+    if (!props.userId) {
+      return { eligible: false, reason: 'User must be logged in' };
+    }
+    return { eligible: true };
+  },
+});
+
+// Check before rendering
+if (instance.isEligible()) {
+  await instance.render('#container');
 }
 ```
 
----
+### Nested Components
 
-## TypeScript Types
-
-All types are exported for TypeScript users:
+Define child components that can be rendered from within the parent.
 
 ```typescript
-import type {
-  // Component types
-  ComponentOptions,
-  ZoidComponent,
-  ZoidComponentInstance,
-  ChildProps,
+const ParentComponent = ForgeFrame.create({
+  tag: 'parent',
+  url: '/parent',
+  children: () => ({
+    CardField: CardFieldComponent,
+    CVVField: CVVFieldComponent,
+  }),
+});
 
-  // Props types
-  PropDefinition,
-  PropsDefinition,
-  PropContext,
-
-  // Template types
-  TemplateContext,
-  ContainerTemplate,
-  PrerenderTemplate,
-
-  // Utility types
-  Dimensions,
-  DomainMatcher,
-  AutoResizeOptions,
-  IframeAttributes,
-  EligibilityResult,
-
-  // Event types
-  EventHandler,
-  EventEmitterInterface,
-
-  // Constant types
-  PropType,
-  ContextType,
-  EventType,
-  SerializationType,
-
-  // React types
-  ReactDriverOptions,
-  ReactComponentProps,
-  ReactComponentType,
-
-  // Advanced types
-  ParentNamespace,
-  SiblingInfo,
-  GetSiblingsOptions,
-  ChildrenDefinition,
-} from 'forgeframe';
+// In the parent's child page:
+const { children } = window.xprops;
+children.CardField({ onValid: () => {} }).render('#card-container');
 ```
 
 ---
 
-## Named Exports
+## API Reference
 
-For tree-shaking, all functions and constants are also available as named exports:
-
-```typescript
-import {
-  // Functions
-  create,
-  destroy,
-  destroyComponents,
-  destroyAll,
-  isChild,
-  getXProps,
-
-  // Constants
-  PROP_TYPE,
-  PROP_SERIALIZATION,
-  CONTEXT,
-  EVENT,
-  VERSION,
-
-  // Errors
-  PopupOpenError,
-
-  // React
-  createReactDriver,
-  withReactDriver,
-} from 'forgeframe';
-```
-
----
-
-## Migration from Zoid
+### ForgeFrame Object
 
 ```typescript
-// Zoid
-import zoid from 'zoid';
-const Component = zoid.create({ tag: 'my-comp', url: '...' });
-
-// ForgeFrame
 import ForgeFrame from 'forgeframe';
-const Component = ForgeFrame.create({ tag: 'my-comp', url: '...' });
+
+ForgeFrame.create(options)        // Create a component
+ForgeFrame.destroy(instance)      // Destroy an instance
+ForgeFrame.destroyComponents(tag) // Destroy all instances of a tag
+ForgeFrame.destroyAll()           // Destroy all instances
+ForgeFrame.isChild()              // Check if in child context
+ForgeFrame.getXProps()            // Get xprops in child
+
+ForgeFrame.PROP_TYPE              // Prop type constants
+ForgeFrame.CONTEXT                // Context constants (IFRAME, POPUP)
+ForgeFrame.EVENT                  // Event name constants
+ForgeFrame.VERSION                // Library version
 ```
 
-### Key Differences
-
-| Feature | Zoid | ForgeFrame |
-|---------|------|------------|
-| Prop types | `'string'` | `ForgeFrame.PROP_TYPE.STRING` |
-| React driver | `.driver('react', React)` | `createReactDriver(Component, { React })` |
-| Bridge URL | Required for IE10 | Not supported (modern browsers only) |
-| Event names | `zoid-rendered` | `rendered` |
-
-### Event Name Mapping
-
-| Zoid Event | ForgeFrame Event |
-|------------|------------------|
-| `zoid-render` | `render` |
-| `zoid-rendered` | `rendered` |
-| `zoid-prerender` | `prerender` |
-| `zoid-prerendered` | `prerendered` |
-| `zoid-display` | `display` |
-| `zoid-close` | `close` |
-| `zoid-destroy` | `destroy` |
-| `zoid-error` | `error` |
-| `zoid-props` | `props` |
-| `zoid-resize` | `resize` |
-| `zoid-focus` | `focus` |
+### Component Options
 
 ```typescript
-// Zoid
-instance.event.on('zoid-rendered', () => console.log('ready'));
+interface ComponentOptions<P> {
+  // Required
+  tag: string;                              // Unique identifier
+  url: string | ((props: P) => string);     // Child page URL
 
-// ForgeFrame
-instance.event.on('rendered', () => console.log('ready'));
+  // Dimensions
+  dimensions?: { width?: number | string; height?: number | string };
+  autoResize?: { width?: boolean; height?: boolean; element?: string };
+
+  // Props
+  props?: PropsDefinition<P>;
+
+  // Rendering
+  defaultContext?: 'iframe' | 'popup';
+  containerTemplate?: (ctx: TemplateContext) => HTMLElement;
+  prerenderTemplate?: (ctx: TemplateContext) => HTMLElement;
+
+  // Security
+  domain?: string;
+  allowedParentDomains?: Array<string | RegExp>;
+
+  // Validation
+  eligible?: (opts: { props: P }) => { eligible: boolean; reason?: string };
+  validate?: (opts: { props: P }) => void;
+
+  // Iframe attributes
+  attributes?: IframeAttributes;
+  style?: CSSProperties;
+  timeout?: number;
+
+  // Nested components
+  children?: () => Record<string, ForgeFrameComponent>;
+}
+```
+
+### Instance Methods
+
+```typescript
+const instance = MyComponent(props);
+
+await instance.render(container?, context?)  // Render
+await instance.renderTo(window, container?)  // Render to another window
+await instance.close()                       // Close and destroy
+await instance.focus()                       // Focus
+await instance.resize({ width, height })     // Resize
+await instance.show()                        // Show
+await instance.hide()                        // Hide
+await instance.updateProps(newProps)         // Update props
+instance.clone()                             // Clone with same props
+instance.isEligible()                        // Check eligibility
+
+instance.uid                                 // Unique ID
+instance.event                               // Event emitter
+instance.state                               // Mutable state
+instance.exports                             // Child exports
+```
+
+---
+
+## TypeScript
+
+ForgeFrame is written in TypeScript and exports all types.
+
+```typescript
+import ForgeFrame, {
+  type ComponentOptions,
+  type ForgeFrameComponent,
+  type ForgeFrameComponentInstance,
+  type ChildProps,
+  type PropDefinition,
+  type PropsDefinition,
+  type TemplateContext,
+  type Dimensions,
+  type EventHandler,
+} from 'forgeframe';
+```
+
+### Typing Child xprops
+
+```typescript
+import { type ChildProps } from 'forgeframe';
+
+interface MyProps {
+  name: string;
+  onSubmit: (data: FormData) => void;
+}
+
+declare global {
+  interface Window {
+    xprops?: ChildProps<MyProps>;
+  }
+}
+
+// Fully typed
+window.xprops!.name;      // string
+window.xprops!.onSubmit;  // (data: FormData) => void
+window.xprops!.close;     // () => Promise<void>
+window.xprops!.resize;    // (dims: Dimensions) => Promise<void>
 ```
 
 ---
 
 ## Browser Support
 
-ForgeFrame requires ES2022+ features and does not support IE. Supported browsers:
+ForgeFrame requires modern browser features (ES2022+).
 
-- Chrome 80+
-- Firefox 75+
-- Safari 14+
-- Edge 80+
+| Browser | Minimum Version |
+|---------|-----------------|
+| Chrome | 80+ |
+| Firefox | 75+ |
+| Safari | 14+ |
+| Edge | 80+ |
+
+**Note:** Internet Explorer is not supported. For IE support, use [Zoid](https://github.com/krakenjs/zoid).
 
 ---
 

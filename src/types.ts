@@ -264,10 +264,10 @@ export interface TemplateContext<P = Record<string, unknown>> {
   doc: Document;
   /** Container element */
   container: HTMLElement;
-  /** The iframe element (null during prerender) */
+  /** The iframe element (null for popup context) */
   frame: HTMLIFrameElement | null;
-  /** The prerender iframe element */
-  prerenderFrame: HTMLIFrameElement | null;
+  /** The prerender/loading element (from prerenderTemplate) */
+  prerenderFrame: HTMLElement | null;
   /** Close the component */
   close: () => Promise<void>;
   /** Focus the component */
@@ -315,13 +315,13 @@ export type PrerenderTemplate<P = Record<string, unknown>> = (
  * Child components can be rendered within the parent component's iframe/popup.
  *
  * @param props - Object containing the parent's props
- * @returns Map of child component names to ZoidComponent instances
+ * @returns Map of child component names to ForgeFrameComponent instances
  *
  * @public
  */
 export type ChildrenDefinition<P = Record<string, unknown>> = (props: {
   props: P;
-}) => Record<string, ZoidComponent>;
+}) => Record<string, ForgeFrameComponent>;
 
 /**
  * Serializable reference to a child component for cross-domain transfer.
@@ -547,7 +547,7 @@ export interface EventEmitterInterface {
  *
  * @public
  */
-export interface ZoidComponentInstance<P = Record<string, unknown>, X = unknown> {
+export interface ForgeFrameComponentInstance<P = Record<string, unknown>, X = unknown> {
   /**
    * Unique instance identifier.
    */
@@ -628,7 +628,7 @@ export interface ZoidComponentInstance<P = Record<string, unknown>, X = unknown>
    *
    * @returns New component instance
    */
-  clone(): ZoidComponentInstance<P, X>;
+  clone(): ForgeFrameComponentInstance<P, X>;
 
   /**
    * Check if the component is eligible to render.
@@ -682,14 +682,14 @@ export interface ZoidComponentInstance<P = Record<string, unknown>, X = unknown>
  *
  * @public
  */
-export interface ZoidComponent<P = Record<string, unknown>, X = unknown> {
+export interface ForgeFrameComponent<P = Record<string, unknown>, X = unknown> {
   /**
    * Create a new component instance with props.
    *
    * @param props - Props to pass to the component
    * @returns New component instance
    */
-  (props?: P): ZoidComponentInstance<P, X>;
+  (props?: P): ForgeFrameComponentInstance<P, X>;
 
   /**
    * Check if current window is a child instance of this component.
@@ -717,7 +717,7 @@ export interface ZoidComponent<P = Record<string, unknown>, X = unknown> {
   /**
    * All active instances of this component.
    */
-  instances: ZoidComponentInstance<P, X>[];
+  instances: ForgeFrameComponentInstance<P, X>[];
 }
 
 // ============================================================================
@@ -912,7 +912,7 @@ export interface ChildProps<P = Record<string, unknown>> {
   /**
    * Child components available for nested rendering.
    */
-  children?: Record<string, ZoidComponent>;
+  children?: Record<string, ForgeFrameComponent>;
 }
 
 // ============================================================================

@@ -1,4 +1,4 @@
-import type { ZoidComponent, ZoidComponentInstance } from '../types';
+import type { ForgeFrameComponent, ForgeFrameComponentInstance } from '../types';
 import type { ContextType } from '../constants';
 
 /**
@@ -201,7 +201,7 @@ export interface ReactComponentType<P> {
  * @public
  */
 export function createReactDriver<P extends Record<string, unknown>, X = unknown>(
-  Component: ZoidComponent<P, X>,
+  Component: ForgeFrameComponent<P, X>,
   options: ReactDriverOptions
 ): ReactComponentType<FullReactComponentProps<P>> {
   const { React } = options;
@@ -220,7 +220,7 @@ export function createReactDriver<P extends Record<string, unknown>, X = unknown
       } = props;
 
       const containerRef = useRef<HTMLDivElement>(null);
-      const instanceRef = useRef<ZoidComponentInstance<P, X> | null>(null);
+      const instanceRef = useRef<ForgeFrameComponentInstance<P, X> | null>(null);
       const [error, setError] = useState<Error | null>(null);
 
       /** Effect: Initialize component instance and render on mount */
@@ -357,7 +357,7 @@ export function withReactDriver(React: ReactLike) {
    * @internal
    */
   return function driver<P extends Record<string, unknown>, X = unknown>(
-    Component: ZoidComponent<P, X>
+    Component: ForgeFrameComponent<P, X>
   ): ReactComponentType<FullReactComponentProps<P>> {
     return createReactDriver(Component, { React });
   };

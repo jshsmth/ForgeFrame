@@ -16,7 +16,7 @@ import type {
   SerializedProps,
   SiblingInfo,
   GetSiblingsOptions,
-  ZoidComponent,
+  ForgeFrameComponent,
   ChildComponentRef,
 } from '../types';
 import { MESSAGE_NAME, EVENT } from '../constants';
@@ -339,10 +339,10 @@ export class ChildComponent<P extends Record<string, unknown>> {
    */
   private buildChildComponents(
     childrenRefs?: Record<string, ChildComponentRef>
-  ): Record<string, ZoidComponent> | undefined {
+  ): Record<string, ForgeFrameComponent> | undefined {
     if (!childrenRefs) return undefined;
 
-    const children: Record<string, ZoidComponent> = {};
+    const children: Record<string, ForgeFrameComponent> = {};
 
     for (const [name, ref] of Object.entries(childrenRefs)) {
       try {

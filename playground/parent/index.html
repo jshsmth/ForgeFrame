@@ -159,64 +159,6 @@
         border: 1px solid #ccc;
         width: 120px;
       }
-      /* Modal styles */
-      .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s, visibility 0.2s;
-      }
-      .modal-overlay.active {
-        opacity: 1;
-        visibility: visible;
-      }
-      .modal-container {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        max-width: 90vw;
-        max-height: 90vh;
-        overflow: hidden;
-        position: relative;
-      }
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        background: #f8f9fa;
-        border-bottom: 1px solid #e0e0e0;
-      }
-      .modal-header h4 {
-        margin: 0;
-        font-size: 0.875rem;
-        color: #333;
-      }
-      .modal-close {
-        background: none;
-        border: none;
-        font-size: 1.25rem;
-        cursor: pointer;
-        color: #666;
-        padding: 0.25rem;
-        line-height: 1;
-      }
-      .modal-close:hover {
-        color: #333;
-      }
-      .modal-body {
-        width: 500px;
-        height: 400px;
-      }
     </style>
   </head>
   <body>
@@ -228,8 +170,8 @@
       <div class="context-toggle">
         <label>Render as:</label>
         <select id="context-select">
-          <option value="iframe">Iframe (Embedded)</option>
-          <option value="modal">Iframe (Modal)</option>
+          <option value="embedded">Embedded Iframe</option>
+          <option value="modal">Iframe as Modal</option>
           <option value="popup">Popup Window</option>
         </select>
       </div>
@@ -287,17 +229,6 @@
     </div>
 
     <div class="log" id="log"></div>
-
-    <!-- Modal for iframe modal mode -->
-    <div class="modal-overlay" id="modal-overlay">
-      <div class="modal-container">
-        <div class="modal-header">
-          <h4>ForgeFrame Component</h4>
-          <button class="modal-close" id="modal-close">&times;</button>
-        </div>
-        <div class="modal-body" id="modal-container"></div>
-      </div>
-    </div>
 
     <script type="module" src="./main.ts"></script>
   </body>
