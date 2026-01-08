@@ -79,38 +79,82 @@ function renderEmbedded() {
       <div class="grid">
         <div class="card">
           <h3>Received Props</h3>
-          <dl class="props-grid" id="props-display">
-            ${renderPropsGrid()}
-          </dl>
+          <div class="card-content">
+            <dl class="props-grid" id="props-display">
+              ${renderPropsGrid()}
+            </dl>
+          </div>
         </div>
 
         <div class="card">
           <h3>Context Info</h3>
-          <dl class="props-grid">
-            <dt>uid</dt>
-            <dd>${xprops.uid.slice(0, 12)}...</dd>
-            <dt>parent</dt>
-            <dd>${xprops.getParentDomain()}</dd>
-          </dl>
+          <div class="card-content">
+            <dl class="props-grid">
+              <dt>uid</dt>
+              <dd>${xprops.uid.slice(0, 12)}...</dd>
+              <dt>parent</dt>
+              <dd>${xprops.getParentDomain()}</dd>
+            </dl>
+          </div>
         </div>
 
         <div class="card full">
           <h3>Call Parent Functions</h3>
-          <div class="buttons">
-            <button id="btn-greet">Send Greeting</button>
-            <button id="btn-export">Export Data</button>
-            <button id="btn-error" class="warning">Report Error</button>
-            <button id="btn-close" class="danger">Request Close</button>
+          <div class="card-content">
+            <div class="buttons">
+              <div class="button-group">
+                <span class="button-group-label">Communication</span>
+                <button id="btn-greet" class="success">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  Send Greeting
+                </button>
+                <button id="btn-export" class="info">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Export Data
+                </button>
+              </div>
+              <div class="button-group">
+                <span class="button-group-label">Actions</span>
+                <button id="btn-error" class="warning">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Report Error
+                </button>
+                <button id="btn-close" class="danger">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  Request Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="card full">
           <h3>Control Iframe</h3>
-          <div class="buttons">
-            <button id="btn-resize-grow">Grow (500px)</button>
-            <button id="btn-resize-shrink">Shrink (300px)</button>
-            <button id="btn-focus">Focus</button>
-            <button id="btn-hide">Hide</button>
+          <div class="card-content">
+            <div class="buttons">
+              <div class="button-group">
+                <span class="button-group-label">Resize</span>
+                <button id="btn-resize-grow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Grow (500px)
+                </button>
+                <button id="btn-resize-shrink">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Shrink (300px)
+                </button>
+              </div>
+              <div class="button-group">
+                <span class="button-group-label">Window</span>
+                <button id="btn-focus">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                  Focus
+                </button>
+                <button id="btn-hide">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  Hide
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

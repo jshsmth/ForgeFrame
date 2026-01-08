@@ -394,28 +394,35 @@ export class ChildComponent<P extends Record<string, unknown>> {
    */
   private setupMessageHandlers(): void {
     this.messenger.on<SerializedProps>(MESSAGE_NAME.PROPS, (serializedProps) => {
-      const newProps = deserializeProps(
-        serializedProps,
-        this.propDefinitions,
-        this.messenger,
-        this.bridge,
-        this.parentWindow,
-        this.parentDomain
-      );
+      try {
+        const newProps = deserializeProps(
+          serializedProps,
+          this.propDefinitions,
+          this.messenger,
+          this.bridge,
+          this.parentWindow,
+          this.parentDomain
+        );
 
-      Object.assign(this.xprops, newProps);
+        Object.assign(this.xprops, newProps);
 
-      for (const handler of this.propsHandlers) {
-        try {
-          handler(newProps);
-        } catch (err) {
-          console.error('Error in props handler:', err);
+        for (const handler of this.propsHandlers) {
+          try {
+            handler(newProps);
+          } catch (err) {
+            console.error('Error in props handler:', err);
+          }
         }
+
+        this.event.emit(EVENT.PROPS, newProps);
+
+        return { success: true };
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        console.error('Error deserializing props:', error);
+        this.event.emit(EVENT.ERROR, error);
+        throw error; // Propagate to parent so it knows the update failed
       }
-
-      this.event.emit(EVENT.PROPS, newProps);
-
-      return { success: true };
     });
   }
 
