@@ -1,0 +1,378 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Messenger } from '../../src/communication/messenger';
+import {
+  serializeMessage,
+  createRequestMessage,
+  createResponseMessage,
+} from '../../src/communication/protocol';
+import { MESSAGE_TYPE } from '../../src/constants';
+
+describe('Messenger', () => {
+  let messenger: Messenger;
+  let mockWindow: Window;
+  let messageListeners: Set<(event: MessageEvent) => void>;
+
+  beforeEach(() => {
+    messageListeners = new Set();
+
+    mockWindow = {
+      addEventListener: vi.fn((event: string, listener: (event: MessageEvent) => void) => {
+        if (event === 'message') {
+          messageListeners.add(listener);
+        }
+      }),
+      removeEventListener: vi.fn((event: string, listener: (event: MessageEvent) => void) => {
+        if (event === 'message') {
+          messageListeners.delete(listener);
+        }
+      }),
+      location: { origin: 'https://parent.com' },
+    } as unknown as Window;
+
+    messenger = new Messenger('test-uid', mockWindow, 'https://parent.com');
+  });
+
+  afterEach(() => {
+    messenger.destroy();
+  });
+
+  function dispatchMessage(data: unknown, source: Window = {} as Window, origin = 'https://child.com') {
+    const event = new MessageEvent('message', {
+      data,
+      source,
+      origin,
+    });
+
+    for (const listener of messageListeners) {
+      listener(event);
+    }
+  }
+
+  describe('constructor', () => {
+    it('should setup message listener', () => {
+      expect(mockWindow.addEventListener).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function)
+      );
+    });
+  });
+
+  describe('send', () => {
+    let targetWindow: Window;
+
+    beforeEach(() => {
+      targetWindow = {
+        postMessage: vi.fn(),
+      } as unknown as Window;
+    });
+
+    it('should send message via postMessage', async () => {
+      vi.useFakeTimers();
+
+      const sendPromise = messenger.send(
+        targetWindow,
+        'https://target.com',
+        'greeting',
+        { name: 'World' }
+      );
+
+      expect(targetWindow.postMessage).toHaveBeenCalledWith(
+        expect.stringContaining('forgeframe:'),
+        'https://target.com'
+      );
+
+      // Simulate response
+      const sentMessage = JSON.parse(
+        (targetWindow.postMessage as ReturnType<typeof vi.fn>).mock.calls[0][0].slice('forgeframe:'.length)
+      );
+
+      const response = createResponseMessage(
+        sentMessage.id,
+        { greeting: 'Hello, World!' },
+        { uid: 'target-uid', domain: 'https://target.com' }
+      );
+
+      dispatchMessage(serializeMessage(response), targetWindow);
+
+      const result = await sendPromise;
+      expect(result).toEqual({ greeting: 'Hello, World!' });
+
+      vi.useRealTimers();
+    });
+
+    it('should timeout if no response', async () => {
+      vi.useFakeTimers();
+
+      const sendPromise = messenger.send(
+        targetWindow,
+        'https://target.com',
+        'test',
+        {},
+        100
+      );
+
+      vi.advanceTimersByTime(100);
+
+      await expect(sendPromise).rejects.toThrow('timed out');
+
+      vi.useRealTimers();
+    });
+
+    it('should throw if messenger is destroyed', async () => {
+      messenger.destroy();
+
+      await expect(
+        messenger.send(targetWindow, 'https://target.com', 'test')
+      ).rejects.toThrow('Messenger has been destroyed');
+    });
+
+    it('should propagate errors from response', async () => {
+      vi.useFakeTimers();
+
+      const sendPromise = messenger.send(
+        targetWindow,
+        'https://target.com',
+        'errorTest'
+      );
+
+      const sentMessage = JSON.parse(
+        (targetWindow.postMessage as ReturnType<typeof vi.fn>).mock.calls[0][0].slice('forgeframe:'.length)
+      );
+
+      const response = createResponseMessage(
+        sentMessage.id,
+        null,
+        { uid: 'target-uid', domain: 'https://target.com' },
+        new Error('Handler failed')
+      );
+
+      dispatchMessage(serializeMessage(response), targetWindow);
+
+      await expect(sendPromise).rejects.toThrow('Handler failed');
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('post', () => {
+    it('should send one-way message without waiting', () => {
+      const targetWindow = {
+        postMessage: vi.fn(),
+      } as unknown as Window;
+
+      messenger.post(targetWindow, 'https://target.com', 'notify', { event: 'update' });
+
+      expect(targetWindow.postMessage).toHaveBeenCalledWith(
+        expect.stringContaining('forgeframe:'),
+        'https://target.com'
+      );
+    });
+
+    it('should throw if messenger is destroyed', () => {
+      messenger.destroy();
+
+      const targetWindow = {
+        postMessage: vi.fn(),
+      } as unknown as Window;
+
+      expect(() =>
+        messenger.post(targetWindow, 'https://target.com', 'test')
+      ).toThrow('Messenger has been destroyed');
+    });
+  });
+
+  describe('on', () => {
+    it('should register handler for message type', async () => {
+      const handler = vi.fn().mockReturnValue({ result: 'ok' });
+
+      messenger.on('testMessage', handler);
+
+      const targetWindow = {
+        postMessage: vi.fn(),
+      } as unknown as Window;
+
+      const request = createRequestMessage('req-1', 'testMessage', { input: 'data' }, {
+        uid: 'sender-uid',
+        domain: 'https://sender.com',
+      });
+
+      dispatchMessage(serializeMessage(request), targetWindow, 'https://sender.com');
+
+      // Allow async handler to complete
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(handler).toHaveBeenCalledWith(
+        { input: 'data' },
+        { uid: 'sender-uid', domain: 'https://sender.com' }
+      );
+    });
+
+    it('should return unsubscribe function', () => {
+      const handler = vi.fn();
+
+      const unsubscribe = messenger.on('testMessage', handler);
+      unsubscribe();
+
+      const targetWindow = {} as Window;
+      const request = createRequestMessage('req-1', 'testMessage', {}, {
+        uid: 'uid',
+        domain: 'https://example.com',
+      });
+
+      dispatchMessage(serializeMessage(request), targetWindow);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('should send response back to source', async () => {
+      const handler = vi.fn().mockReturnValue({ response: 'data' });
+
+      messenger.on('testMessage', handler);
+
+      const targetWindow = {
+        postMessage: vi.fn(),
+      } as unknown as Window;
+
+      const request = createRequestMessage('req-1', 'testMessage', {}, {
+        uid: 'sender-uid',
+        domain: 'https://sender.com',
+      });
+
+      dispatchMessage(serializeMessage(request), targetWindow, 'https://sender.com');
+
+      // Allow async handler to complete
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(targetWindow.postMessage).toHaveBeenCalledWith(
+        expect.stringContaining('forgeframe:'),
+        'https://sender.com'
+      );
+
+      // Parse the response
+      const responseStr = (targetWindow.postMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const responseData = JSON.parse(responseStr.slice('forgeframe:'.length));
+
+      expect(responseData.type).toBe(MESSAGE_TYPE.RESPONSE);
+      expect(responseData.data).toEqual({ response: 'data' });
+    });
+
+    it('should send error response on handler failure', async () => {
+      const handler = vi.fn().mockRejectedValue(new Error('Handler error'));
+
+      messenger.on('testMessage', handler);
+
+      const targetWindow = {
+        postMessage: vi.fn(),
+      } as unknown as Window;
+
+      const request = createRequestMessage('req-1', 'testMessage', {}, {
+        uid: 'sender-uid',
+        domain: 'https://sender.com',
+      });
+
+      dispatchMessage(serializeMessage(request), targetWindow, 'https://sender.com');
+
+      // Allow async handler to complete
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const responseStr = (targetWindow.postMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const responseData = JSON.parse(responseStr.slice('forgeframe:'.length));
+
+      expect(responseData.error).toBeDefined();
+      expect(responseData.error.message).toBe('Handler error');
+    });
+  });
+
+  describe('message filtering', () => {
+    it('should ignore messages from same window', () => {
+      const handler = vi.fn();
+      messenger.on('test', handler);
+
+      const request = createRequestMessage('req-1', 'test', {}, {
+        uid: 'uid',
+        domain: 'https://example.com',
+      });
+
+      // Source is the same as messenger window
+      dispatchMessage(serializeMessage(request), mockWindow);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('should ignore non-ForgeFrame messages', () => {
+      const handler = vi.fn();
+      messenger.on('test', handler);
+
+      dispatchMessage('not a forgeframe message', {} as Window);
+      dispatchMessage({ type: 'other' }, {} as Window);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('should ignore messages without handlers', async () => {
+      const targetWindow = {
+        postMessage: vi.fn(),
+      } as unknown as Window;
+
+      const request = createRequestMessage('req-1', 'unknownMessage', {}, {
+        uid: 'uid',
+        domain: 'https://example.com',
+      });
+
+      dispatchMessage(serializeMessage(request), targetWindow);
+
+      // Allow async processing
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Should not send any response for unknown message
+      expect(targetWindow.postMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('destroy', () => {
+    it('should remove message listener', () => {
+      messenger.destroy();
+
+      expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function)
+      );
+    });
+
+    it('should reject all pending requests', async () => {
+      vi.useFakeTimers();
+
+      const targetWindow = {
+        postMessage: vi.fn(),
+      } as unknown as Window;
+
+      const sendPromise = messenger.send(
+        targetWindow,
+        'https://target.com',
+        'test'
+      );
+
+      messenger.destroy();
+
+      await expect(sendPromise).rejects.toThrow('Messenger destroyed');
+
+      vi.useRealTimers();
+    });
+
+    it('should be idempotent', () => {
+      messenger.destroy();
+      messenger.destroy();
+
+      // Should only remove listener once
+      expect(mockWindow.removeEventListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should set isDestroyed flag', () => {
+      expect(messenger.isDestroyed()).toBe(false);
+
+      messenger.destroy();
+
+      expect(messenger.isDestroyed()).toBe(true);
+    });
+  });
+});
