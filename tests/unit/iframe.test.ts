@@ -47,7 +47,7 @@ describe('createIframe', () => {
 
     expect(iframe.getAttribute('frameborder')).toBe('0');
     expect(iframe.getAttribute('allowtransparency')).toBe('true');
-    expect(iframe.getAttribute('scrolling')).toBe('no');
+    expect(iframe.getAttribute('scrolling')).toBe('auto');
     expect(iframe.getAttribute('sandbox')).toContain('allow-scripts');
     expect(iframe.getAttribute('sandbox')).toContain('allow-same-origin');
   });
