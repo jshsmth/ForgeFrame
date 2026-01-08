@@ -205,14 +205,12 @@ export class ChildComponent<P extends Record<string, unknown>> {
       const error = err instanceof Error ? err : new Error(String(err));
       this.initError = error;
 
-      // Emit error event so parent/listeners can be notified
       this.event.emit(EVENT.ERROR, {
         type: 'init_failed',
         message: `Failed to initialize child component: ${error.message}`,
         error,
       });
 
-      // Log for debugging
       console.error('Failed to send init message:', err);
     }
   }

@@ -1,4 +1,5 @@
 import type { TemplateContext, Dimensions } from '../types';
+import { normalizeDimensionToCSS } from '../utils/dimension';
 
 /**
  * Creates the default container element for ForgeFrame components.
@@ -44,8 +45,8 @@ export function defaultContainerTemplate<P>(
   Object.assign(container.style, {
     display: 'inline-block',
     position: 'relative',
-    width: normalizeDimension(dimensions.width),
-    height: normalizeDimension(dimensions.height),
+    width: normalizeDimensionToCSS(dimensions.width),
+    height: normalizeDimensionToCSS(dimensions.height),
     overflow: 'hidden',
   });
 
@@ -97,8 +98,8 @@ export function defaultPrerenderTemplate<P>(
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: normalizeDimension(dimensions.width),
-    height: normalizeDimension(dimensions.height),
+    width: normalizeDimensionToCSS(dimensions.width),
+    height: normalizeDimensionToCSS(dimensions.height),
     backgroundColor: '#f5f5f5',
     position: 'absolute',
     top: '0',
@@ -133,26 +134,6 @@ export function defaultPrerenderTemplate<P>(
 }
 
 /**
- * Normalizes a dimension value to a CSS-compatible string.
- *
- * @remarks
- * This function converts dimension values to CSS strings:
- * - `undefined` returns `'100%'` as the default
- * - Numbers are converted to pixel strings (e.g., `400` becomes `'400px'`)
- * - Strings are returned as-is (e.g., `'50%'`, `'auto'`)
- *
- * @param value - The dimension value to normalize
- * @returns A CSS-compatible dimension string
- *
- * @internal
- */
-function normalizeDimension(value: string | number | undefined): string {
-  if (value === undefined) return '100%';
-  if (typeof value === 'number') return `${value}px`;
-  return value;
-}
-
-/**
  * Applies width and height dimensions to an HTML element.
  *
  * @remarks
@@ -177,10 +158,10 @@ export function applyDimensions(
   dimensions: Dimensions
 ): void {
   if (dimensions.width !== undefined) {
-    element.style.width = normalizeDimension(dimensions.width);
+    element.style.width = normalizeDimensionToCSS(dimensions.width);
   }
   if (dimensions.height !== undefined) {
-    element.style.height = normalizeDimension(dimensions.height);
+    element.style.height = normalizeDimensionToCSS(dimensions.height);
   }
 }
 
@@ -335,7 +316,6 @@ export async function swapPrerenderContent(
     prerenderElement.remove();
   }
 
-  // Reset any hidden state and prepare for fade in
   actualElement.style.display = '';
   actualElement.style.visibility = 'visible';
   actualElement.style.opacity = '0';

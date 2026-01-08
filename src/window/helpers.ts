@@ -390,7 +390,7 @@ export function focusWindow(win: Window): void {
   try {
     win.focus();
   } catch {
-    // Focus errors are silently ignored
+    // May fail cross-origin
   }
 }
 
@@ -417,7 +417,7 @@ export function closeWindow(win: Window): void {
   try {
     win.close();
   } catch {
-    // Close errors are silently ignored
+    // May fail cross-origin
   }
 }
 

@@ -1,5 +1,11 @@
 import type { WindowRef } from '../types';
-import { getParent, getOpener, getAncestor } from './helpers';
+import { getParent, getOpener, getAncestor, isWindowClosed } from './helpers';
+
+/**
+ * Maximum number of windows to keep in the registry.
+ * @internal
+ */
+const MAX_REGISTRY_SIZE = 100;
 
 /**
  * Global storage for window references by UID.
@@ -13,6 +19,25 @@ import { getParent, getOpener, getAncestor } from './helpers';
 const windowRegistry = new Map<string, Window>();
 
 /**
+ * Cleans up closed windows from the registry to prevent memory leaks.
+ *
+ * @internal
+ */
+function cleanupClosedWindows(): void {
+  const toDelete: string[] = [];
+
+  for (const [uid, win] of windowRegistry.entries()) {
+    if (isWindowClosed(win)) {
+      toDelete.push(uid);
+    }
+  }
+
+  for (const uid of toDelete) {
+    windowRegistry.delete(uid);
+  }
+}
+
+/**
  * Registers a window with a unique identifier for later retrieval.
  *
  * @param uid - The unique identifier for the window.
@@ -21,6 +46,10 @@ const windowRegistry = new Map<string, Window>();
  * @remarks
  * Registered windows can be retrieved later using {@link getWindowByUID}.
  * This is useful for maintaining references to windows across different contexts.
+ *
+ * The registry automatically cleans up closed windows when new windows are
+ * registered to prevent memory leaks. A maximum of 100 windows can be
+ * registered at a time.
  *
  * @example
  * ```typescript
@@ -34,6 +63,19 @@ const windowRegistry = new Map<string, Window>();
  * @public
  */
 export function registerWindow(uid: string, win: Window): void {
+  // Periodically clean up closed windows to prevent memory leaks
+  if (windowRegistry.size >= MAX_REGISTRY_SIZE) {
+    cleanupClosedWindows();
+  }
+
+  // If still at max after cleanup, remove oldest entry (FIFO)
+  if (windowRegistry.size >= MAX_REGISTRY_SIZE) {
+    const oldestKey = windowRegistry.keys().next().value;
+    if (oldestKey) {
+      windowRegistry.delete(oldestKey);
+    }
+  }
+
   windowRegistry.set(uid, win);
 }
 

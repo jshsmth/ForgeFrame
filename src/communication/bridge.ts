@@ -13,6 +13,12 @@ import { generateShortUID } from '../utils/uid';
 import type { Messenger } from './messenger';
 
 /**
+ * Generic function type for cross-domain callable functions.
+ * @internal
+ */
+type CallableFunction = (...args: unknown[]) => unknown | Promise<unknown>;
+
+/**
  * Handles serialization and deserialization of functions for cross-domain calls.
  *
  * @remarks
@@ -36,12 +42,10 @@ import type { Messenger } from './messenger';
  */
 export class FunctionBridge {
   /** @internal */
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  private localFunctions = new Map<string, Function>();
+  private localFunctions = new Map<string, CallableFunction>();
 
   /** @internal */
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  private remoteFunctions = new Map<string, Function>();
+  private remoteFunctions = new Map<string, CallableFunction>();
 
   /**
    * Creates a new FunctionBridge instance.
@@ -59,8 +63,7 @@ export class FunctionBridge {
    * @param name - Optional name for debugging
    * @returns A function reference that can be sent across domains
    */
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  serialize(fn: Function, name?: string): FunctionRef {
+  serialize(fn: CallableFunction, name?: string): FunctionRef {
     const id = generateShortUID();
     this.localFunctions.set(id, fn);
 
@@ -87,8 +90,7 @@ export class FunctionBridge {
     ref: FunctionRef,
     targetWin: Window,
     targetDomain: string
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  ): Function {
+  ): CallableFunction {
     const cacheKey = `${ref.__id__}`;
     const cached = this.remoteFunctions.get(cacheKey);
     if (cached) return cached;
@@ -173,7 +175,7 @@ export function serializeFunctions(
   bridge: FunctionBridge
 ): unknown {
   if (typeof obj === 'function') {
-    return bridge.serialize(obj);
+    return bridge.serialize(obj as CallableFunction);
   }
 
   if (Array.isArray(obj)) {

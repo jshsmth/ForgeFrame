@@ -274,7 +274,7 @@ describe('watchPopupClose', () => {
       },
     } as Window;
 
-    watchPopupClose(mockWin, callback, 100);
+    watchPopupClose(mockWin, callback, { initialInterval: 100, maxInterval: 100, multiplier: 1 });
 
     // Not closed yet
     vi.advanceTimersByTime(100);
@@ -291,7 +291,7 @@ describe('watchPopupClose', () => {
     const callback = vi.fn();
     const mockWin = { closed: false } as Window;
 
-    const cleanup = watchPopupClose(mockWin, callback, 100);
+    const cleanup = watchPopupClose(mockWin, callback, { initialInterval: 100, maxInterval: 100, multiplier: 1 });
     cleanup();
 
     // Simulate popup closing after cleanup
@@ -308,14 +308,14 @@ describe('watchPopupClose', () => {
       },
     } as unknown as Window;
 
-    watchPopupClose(mockWin, callback, 100);
+    watchPopupClose(mockWin, callback, { initialInterval: 100, maxInterval: 100, multiplier: 1 });
 
     vi.advanceTimersByTime(100);
 
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
-  it('should use default interval of 500ms', () => {
+  it('should use default interval of 100ms (with exponential backoff)', () => {
     const callback = vi.fn();
     let isClosed = false;
     const mockWin = {
@@ -326,11 +326,12 @@ describe('watchPopupClose', () => {
 
     watchPopupClose(mockWin, callback);
 
-    vi.advanceTimersByTime(400);
+    // Default is 100ms initial interval
+    vi.advanceTimersByTime(50);
     expect(callback).not.toHaveBeenCalled();
 
     isClosed = true;
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(100);
 
     expect(callback).toHaveBeenCalled();
   });

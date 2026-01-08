@@ -202,7 +202,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   private buildTrustedDomains(): string | string[] | RegExp | undefined {
     const domains: string[] = [];
 
-    // Trust the component's target URL domain
     const url = typeof this.options.url === 'function'
       ? this.options.url(this.props as P)
       : this.options.url;
@@ -214,14 +213,12 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       // Invalid URL, will be caught during render
     }
 
-    // Trust domains from options.domain if specified
     if (this.options.domain) {
       if (typeof this.options.domain === 'string') {
         domains.push(this.options.domain);
       } else if (Array.isArray(this.options.domain)) {
         domains.push(...this.options.domain);
       } else if (this.options.domain instanceof RegExp) {
-        // Return RegExp directly for pattern matching
         return this.options.domain;
       }
     }
@@ -544,7 +541,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       hideIframe(this.iframe);
     }
 
-    // Create prerender element
     const prerenderContext: TemplateContext<P> & { cspNonce?: string } = {
       uid: this.uid,
       tag: this.options.tag,
@@ -562,7 +558,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
 
     this.prerenderElement = prerenderTemplateFn(prerenderContext);
 
-    // Create template context with pre-created frame elements
     const templateContext: TemplateContext<P> & { cspNonce?: string } = {
       uid: this.uid,
       tag: this.options.tag,
@@ -616,7 +611,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     iframe.setAttribute('allowtransparency', 'true');
     iframe.setAttribute('scrolling', 'auto');
 
-    // Apply dimensions
     if (dimensions.width !== undefined) {
       iframe.style.width = typeof dimensions.width === 'number'
         ? `${dimensions.width}px`
@@ -628,7 +622,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
         : dimensions.height;
     }
 
-    // Apply HTML attributes
     for (const [key, value] of Object.entries(attributes)) {
       if (value === undefined) continue;
       if (typeof value === 'boolean') {
@@ -638,7 +631,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       }
     }
 
-    // Apply CSS styles
     for (const [key, value] of Object.entries(style)) {
       if (value === undefined) continue;
       const cssValue = typeof value === 'number' ? `${value}px` : value;
@@ -904,8 +896,6 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
           }
         }
 
-        // TODO: If anyParent option, iterate all components in registry
-
         return siblings;
       }
     );
@@ -941,7 +931,13 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     const callback = (this.props as Record<string, unknown>)[name];
     if (typeof callback === 'function') {
       try {
-        callback(...args);
+        const result = callback(...args);
+        // Handle async callbacks - catch promise rejections
+        if (result && typeof result === 'object' && 'catch' in result && typeof result.catch === 'function') {
+          (result as Promise<unknown>).catch((err: unknown) => {
+            console.error(`Error in async ${name} callback:`, err);
+          });
+        }
       } catch (err) {
         console.error(`Error in ${name} callback:`, err);
       }

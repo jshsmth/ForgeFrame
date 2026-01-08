@@ -11,7 +11,6 @@ import type { Message, DomainMatcher } from '../types';
 import { MESSAGE_TYPE } from '../constants';
 import { generateShortUID } from '../utils/uid';
 import { createDeferred, type Deferred } from '../utils/promise';
-import { matchDomain } from '../window/helpers';
 import {
   serializeMessage,
   deserializeMessage,
@@ -96,10 +95,8 @@ export class Messenger {
     private domain: string = window.location.origin,
     trustedDomains?: DomainMatcher
   ) {
-    // Always trust our own domain
     this.allowedOrigins.add(domain);
 
-    // Add any additional trusted domains
     if (trustedDomains) {
       this.addTrustedDomain(trustedDomains);
     }
@@ -132,12 +129,10 @@ export class Messenger {
    * @internal
    */
   private isOriginTrusted(origin: string): boolean {
-    // Check exact matches first
     if (this.allowedOrigins.has(origin)) {
       return true;
     }
 
-    // Check regex patterns
     for (const pattern of this.allowedOriginPatterns) {
       if (pattern.test(origin)) {
         return true;
@@ -251,7 +246,6 @@ export class Messenger {
    */
   private setupListener(): void {
     this.listener = (event: MessageEvent) => {
-      // Ignore messages from self
       if (event.source === this.win) return;
 
       // Security: Validate origin before processing any message

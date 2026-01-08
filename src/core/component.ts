@@ -48,6 +48,17 @@ function validateComponentOptions<P>(options: ComponentOptions<P>): void {
     throw new Error('Component url is required');
   }
 
+  // Validate URL format if it's a string (can't validate function URLs at definition time)
+  if (typeof options.url === 'string') {
+    try {
+      new URL(options.url, window.location.origin);
+    } catch {
+      throw new Error(
+        `Invalid component URL "${options.url}". Must be a valid absolute or relative URL.`
+      );
+    }
+  }
+
   if (componentRegistry.has(options.tag)) {
     throw new Error(`Component "${options.tag}" is already registered`);
   }

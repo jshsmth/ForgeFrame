@@ -42,3 +42,4 @@ export {
   tryCatch,
   type Deferred,
 } from './promise';
+export { normalizeDimensionToCSS, normalizeDimensionToNumber } from './dimension';
