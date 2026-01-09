@@ -213,4 +213,4 @@ export const WINDOW_NAME_PREFIX = '__forgeframe__';
  * Current library version.
  * @public
  */
-export const VERSION = '1.0.0';
+export const VERSION = '0.0.1';
