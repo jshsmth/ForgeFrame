@@ -141,5 +141,15 @@ elements.jsonEditor.addEventListener('keydown', (e) => {
 // Initialize
 // ============================================================================
 
+function updateHeaderInfo() {
+  const headerInfo = document.getElementById('header-info');
+  if (headerInfo) {
+    const parentUrl = new URL(window.location.href).host;
+    const childUrl = new URL(currentConfig.url).host;
+    headerInfo.textContent = `${parentUrl} → ${childUrl}`;
+  }
+}
+
 initEditor();
+updateHeaderInfo();
 log('Playground ready', 'success');
