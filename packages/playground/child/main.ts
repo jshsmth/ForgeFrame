@@ -255,11 +255,12 @@ function renderEmbedded() {
  * Render when opened directly (not embedded)
  */
 function renderStandalone() {
+  const parentUrl = import.meta.env.VITE_PARENT_URL || 'https://localhost:5173';
   app.innerHTML = `
     <div class="not-embedded">
       <h2>Child Component</h2>
       <p>This page is designed to be embedded via ForgeFrame.</p>
-      <p>Open <code>https://localhost:5173</code> and click <strong>Render</strong>.</p>
+      <p>Open <code>${parentUrl}</code> and click <strong>Render</strong>.</p>
       <p class="hint">window.xprops is not available (no ForgeFrame payload)</p>
     </div>
   `;
