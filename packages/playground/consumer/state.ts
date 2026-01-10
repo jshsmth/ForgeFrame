@@ -11,6 +11,7 @@ export let currentIframeStyle: IframeStyle = 'embedded';
 export let currentConfig: PlaygroundConfig = { ...DEFAULT_CONFIG };
 export let instance: ForgeFrameComponentInstance<DynamicProps> | null = null;
 export let modalOverlay: HTMLElement | null = null;
+export let modalBody: HTMLElement | null = null;
 export let currentPropValues: Record<string, unknown> = {};
 
 // Cache created components to avoid re-registration errors
@@ -35,6 +36,10 @@ export function setInstance(inst: ForgeFrameComponentInstance<DynamicProps> | nu
 
 export function setModalOverlay(overlay: HTMLElement | null) {
   modalOverlay = overlay;
+}
+
+export function setModalBody(body: HTMLElement | null) {
+  modalBody = body;
 }
 
 export function resetPropValues() {
