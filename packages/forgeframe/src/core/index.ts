@@ -4,8 +4,8 @@
  *
  * @remarks
  * This module provides the primary API for creating, managing, and destroying
- * cross-domain components. It includes both parent-side (host page) and
- * child-side (embedded page) functionality.
+ * cross-domain components. It includes both consumer-side (embedding app) and
+ * host-side (embedded page) functionality.
  */
 
 export {
@@ -16,9 +16,9 @@ export {
   destroyAll,
   unregisterComponent,
   clearComponents,
-  isChild,
+  isHost,
   getXProps,
 } from './component';
 
-export { ParentComponent } from './parent';
-export { ChildComponent, initChild, getChild } from './child';
+export { ConsumerComponent } from './consumer';
+export { HostComponent, initHost, getHost } from './host';

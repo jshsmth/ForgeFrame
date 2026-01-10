@@ -4,7 +4,7 @@
  *
  * @remarks
  * This module handles merging user props with defaults, validating prop
- * types, and filtering props for sending to child components.
+ * types, and filtering props for sending to host components.
  */
 
 import type {
@@ -136,24 +136,24 @@ function validateType(value: unknown, type: string): boolean {
 }
 
 /**
- * Filters props for sending to the child component.
+ * Filters props for sending to the host component.
  *
  * @remarks
- * Respects sendToChild, sameDomain, and trustedDomains settings.
+ * Respects sendToHost, sameDomain, and trustedDomains settings.
  *
  * @typeParam P - The props type
  * @param props - All props
  * @param definitions - Prop definitions
- * @param childDomain - The child's domain
- * @param isSameDomain - Whether child is same domain as parent
- * @returns Filtered props for the child
+ * @param hostDomain - The host's domain
+ * @param isSameDomain - Whether host is same domain as consumer
+ * @returns Filtered props for the host
  *
  * @public
  */
-export function getPropsForChild<P extends Record<string, unknown>>(
+export function getPropsForHost<P extends Record<string, unknown>>(
   props: P,
   definitions: PropsDefinition<P>,
-  childDomain: string,
+  hostDomain: string,
   isSameDomain: boolean
 ): Partial<P> {
   const allDefs = {
@@ -167,17 +167,17 @@ export function getPropsForChild<P extends Record<string, unknown>>(
     const definition = def as PropDefinition<unknown, P>;
     const value = props[key as keyof P];
 
-    if (definition.sendToChild === false) continue;
+    if (definition.sendToHost === false) continue;
     if (definition.sameDomain && !isSameDomain) continue;
 
     if (definition.trustedDomains) {
       const trusted = definition.trustedDomains as DomainMatcher;
-      if (!matchDomain(trusted, childDomain)) continue;
+      if (!matchDomain(trusted, hostDomain)) continue;
     }
 
     let finalValue = value;
-    if (definition.childDecorate && value !== undefined) {
-      finalValue = definition.childDecorate({ value, props }) as P[keyof P];
+    if (definition.hostDecorate && value !== undefined) {
+      finalValue = definition.hostDecorate({ value, props }) as P[keyof P];
     }
 
     (result as Record<string, unknown>)[key] = finalValue;

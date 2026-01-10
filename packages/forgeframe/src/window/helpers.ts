@@ -171,10 +171,10 @@ export function getOpener(win: Window = window): Window | null {
 }
 
 /**
- * Gets the parent window for an iframe.
+ * Gets the consumer window for an iframe (the embedding app).
  *
  * @param win - The iframe window. Defaults to the current window.
- * @returns The parent window, or `null` if not in an iframe or cross-origin access is denied.
+ * @returns The consumer window, or `null` if not in an iframe or cross-origin access is denied.
  *
  * @remarks
  * Returns `null` if the window is the top-level window (i.e., `parent === self`).
@@ -182,16 +182,16 @@ export function getOpener(win: Window = window): Window | null {
  *
  * @example
  * ```typescript
- * // In an iframe
- * const parent = getParent();
- * if (parent) {
- *   // Communicate with parent frame
+ * // In an iframe (host)
+ * const consumer = getConsumer();
+ * if (consumer) {
+ *   // Communicate with consumer frame
  * }
  * ```
  *
  * @public
  */
-export function getParent(win: Window = window): Window | null {
+export function getConsumer(win: Window = window): Window | null {
   try {
     const parent = win.parent;
     if (parent && parent !== win) {
@@ -291,7 +291,7 @@ export function isPopup(win: Window = window): boolean {
  * Gets an ancestor window at a specific distance in the frame hierarchy.
  *
  * @param win - The starting window. Defaults to the current window.
- * @param distance - The number of levels to traverse up. 1 = parent, 2 = grandparent, etc.
+ * @param distance - The number of levels to traverse up. 1 = consumer, 2 = grandparent, etc.
  * @returns The ancestor window at the specified distance, or `null` if not found.
  *
  * @remarks
@@ -303,8 +303,8 @@ export function isPopup(win: Window = window): boolean {
  * // Get the grandparent window (2 levels up)
  * const grandparent = getAncestor(window, 2);
  *
- * // Get the parent window (equivalent to getParent())
- * const parent = getAncestor(window, 1);
+ * // Get the consumer window (equivalent to getConsumer())
+ * const consumer = getAncestor(window, 1);
  * ```
  *
  * @public
@@ -316,7 +316,7 @@ export function getAncestor(
   let current: Window | null = win;
 
   for (let i = 0; i < distance; i++) {
-    current = getParent(current);
+    current = getConsumer(current);
     if (!current) return null;
   }
 
@@ -324,41 +324,41 @@ export function getAncestor(
 }
 
 /**
- * Calculates the distance (number of levels) from a child window to a parent window.
+ * Calculates the distance (number of levels) from a host window to a consumer window.
  *
- * @param child - The child window to start from.
- * @param parent - The target parent window.
- * @returns The number of levels between child and parent, or `-1` if the parent is not an ancestor.
+ * @param host - The host window to start from.
+ * @param consumer - The target consumer window.
+ * @returns The number of levels between host and consumer, or `-1` if the consumer is not an ancestor.
  *
  * @remarks
- * This function traverses up the parent chain from the child window, counting levels
- * until it finds the target parent. Has a safety limit of 100 levels to prevent infinite loops.
+ * This function traverses up the parent chain from the host window, counting levels
+ * until it finds the target consumer. Has a safety limit of 100 levels to prevent infinite loops.
  *
  * @example
  * ```typescript
  * // If iframe is nested 2 levels deep
- * const distance = getDistanceToParent(iframe.contentWindow, window.top);
+ * const distance = getDistanceToConsumer(iframe.contentWindow, window.top);
  * console.log(distance); // 2
  *
  * // If not an ancestor
- * const notFound = getDistanceToParent(windowA, windowB);
+ * const notFound = getDistanceToConsumer(windowA, windowB);
  * console.log(notFound); // -1
  * ```
  *
  * @public
  */
-export function getDistanceToParent(
-  child: Window,
-  parent: Window
+export function getDistanceToConsumer(
+  host: Window,
+  consumer: Window
 ): number {
-  let current: Window | null = child;
+  let current: Window | null = host;
   let distance = 0;
 
   while (current) {
-    if (current === parent) {
+    if (current === consumer) {
       return distance;
     }
-    current = getParent(current);
+    current = getConsumer(current);
     distance++;
 
     if (distance > 100) {

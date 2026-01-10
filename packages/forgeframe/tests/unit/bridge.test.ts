@@ -334,43 +334,43 @@ describe('deserializeFunctions', () => {
 
 describe('round-trip serialization', () => {
   it('should preserve function calls through serialize/deserialize', async () => {
-    const parentMessenger = createMockMessenger();
-    const childMessenger = createMockMessenger();
+    const consumerMessenger = createMockMessenger();
+    const hostMessenger = createMockMessenger();
 
-    const parentBridge = new FunctionBridge(parentMessenger);
-    const childBridge = new FunctionBridge(childMessenger);
+    const consumerBridge = new FunctionBridge(consumerMessenger);
+    const hostBridge = new FunctionBridge(hostMessenger);
 
     const targetWin = {} as Window;
-    const targetDomain = 'https://child.com';
+    const targetDomain = 'https://host.com';
 
-    // Parent serializes a function
+    // Consumer serializes a function
     const originalFn = vi.fn().mockReturnValue('success');
-    const serialized = parentBridge.serialize(originalFn, 'myCallback');
+    const serialized = consumerBridge.serialize(originalFn, 'myCallback');
 
-    // Child deserializes it
-    const deserialized = childBridge.deserialize(
+    // Host deserializes it
+    const deserialized = hostBridge.deserialize(
       serialized,
       targetWin,
       targetDomain
     ) as (...args: unknown[]) => Promise<unknown>;
 
-    // Child calls the function
+    // Host calls the function
     await deserialized('arg1');
 
-    // Verify the call was sent to parent
-    expect(childMessenger.send).toHaveBeenCalledWith(
+    // Verify the call was sent to consumer
+    expect(hostMessenger.send).toHaveBeenCalledWith(
       targetWin,
       targetDomain,
       MESSAGE_NAME.CALL,
       { id: serialized.__id__, args: ['arg1'] }
     );
 
-    // Simulate the parent receiving and handling the call
-    const result = await parentMessenger.simulateCall(serialized.__id__, ['arg1']);
+    // Simulate the consumer receiving and handling the call
+    const result = await consumerMessenger.simulateCall(serialized.__id__, ['arg1']);
     expect(result).toBe('success');
     expect(originalFn).toHaveBeenCalledWith('arg1');
 
-    parentBridge.destroy();
-    childBridge.destroy();
+    consumerBridge.destroy();
+    hostBridge.destroy();
   });
 });

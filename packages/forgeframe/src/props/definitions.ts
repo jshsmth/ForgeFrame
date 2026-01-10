@@ -83,100 +83,100 @@ export const BUILTIN_PROP_DEFINITIONS: Record<string, PropDefinition> = {
   uid: {
     type: PROP_TYPE.STRING,
     required: false,
-    sendToChild: true,
+    sendToHost: true,
   },
 
   tag: {
     type: PROP_TYPE.STRING,
     required: false,
-    sendToChild: true,
+    sendToHost: true,
   },
 
   dimensions: {
     type: PROP_TYPE.OBJECT,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
     default: () => ({ width: '100%', height: '100%' }),
   },
 
   timeout: {
     type: PROP_TYPE.NUMBER,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
     default: () => 10000,
   },
 
   cspNonce: {
     type: PROP_TYPE.STRING,
     required: false,
-    sendToChild: true,
+    sendToHost: true,
   },
 
-  // Lifecycle callbacks - functions sent to child
+  // Lifecycle callbacks - functions sent to host
   onDisplay: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onRendered: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onRender: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onPrerendered: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onPrerender: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onClose: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onDestroy: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onResize: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onFocus: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onError: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 
   onProps: {
     type: PROP_TYPE.FUNCTION,
     required: false,
-    sendToChild: false,
+    sendToHost: false,
   },
 };
 

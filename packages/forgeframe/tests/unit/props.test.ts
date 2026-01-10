@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   normalizeProps,
   validateProps,
-  getPropsForChild,
+  getPropsForHost,
   propsToQueryParams,
 } from '@/props/normalize';
 import { cloneProps } from '@/props/serialize';
@@ -219,17 +219,17 @@ describe('Props Validation', () => {
   });
 });
 
-describe('Props for Child', () => {
-  it('should filter props with sendToChild: false', () => {
+describe('Props for Host', () => {
+  it('should filter props with sendToHost: false', () => {
     const definitions: PropsDefinition<{ visible: string; hidden: string }> = {
-      visible: { type: PROP_TYPE.STRING, sendToChild: true },
-      hidden: { type: PROP_TYPE.STRING, sendToChild: false },
+      visible: { type: PROP_TYPE.STRING, sendToHost: true },
+      hidden: { type: PROP_TYPE.STRING, sendToHost: false },
     };
 
-    const result = getPropsForChild(
+    const result = getPropsForHost(
       { visible: 'yes', hidden: 'no' },
       definitions,
-      'https://child.com',
+      'https://host.com',
       false
     );
 
@@ -242,17 +242,17 @@ describe('Props for Child', () => {
       secret: { type: PROP_TYPE.STRING, sameDomain: true },
     };
 
-    const crossDomainResult = getPropsForChild(
+    const crossDomainResult = getPropsForHost(
       { secret: 'sensitive' },
       definitions,
       'https://other.com',
       false
     );
 
-    const sameDomainResult = getPropsForChild(
+    const sameDomainResult = getPropsForHost(
       { secret: 'sensitive' },
       definitions,
-      'https://parent.com',
+      'https://consumer.com',
       true
     );
 
@@ -268,14 +268,14 @@ describe('Props for Child', () => {
       },
     };
 
-    const trustedResult = getPropsForChild(
+    const trustedResult = getPropsForHost(
       { data: 'value' },
       definitions,
       'https://trusted.com',
       false
     );
 
-    const untrustedResult = getPropsForChild(
+    const untrustedResult = getPropsForHost(
       { data: 'value' },
       definitions,
       'https://untrusted.com',
@@ -286,22 +286,22 @@ describe('Props for Child', () => {
     expect(untrustedResult.data).toBeUndefined();
   });
 
-  it('should apply childDecorate function', () => {
+  it('should apply hostDecorate function', () => {
     const definitions: PropsDefinition<{ value: string }> = {
       value: {
         type: PROP_TYPE.STRING,
-        childDecorate: ({ value }) => `child:${value}`,
+        hostDecorate: ({ value }) => `host:${value}`,
       },
     };
 
-    const result = getPropsForChild(
+    const result = getPropsForHost(
       { value: 'test' },
       definitions,
-      'https://child.com',
+      'https://host.com',
       false
     );
 
-    expect(result.value).toBe('child:test');
+    expect(result.value).toBe('host:test');
   });
 });
 
@@ -469,7 +469,7 @@ describe('BUILTIN_PROP_DEFINITIONS', () => {
     for (const prop of lifecycleProps) {
       expect(BUILTIN_PROP_DEFINITIONS[prop]).toBeDefined();
       expect(BUILTIN_PROP_DEFINITIONS[prop].type).toBe(PROP_TYPE.FUNCTION);
-      expect(BUILTIN_PROP_DEFINITIONS[prop].sendToChild).toBe(false);
+      expect(BUILTIN_PROP_DEFINITIONS[prop].sendToHost).toBe(false);
     }
   });
 });

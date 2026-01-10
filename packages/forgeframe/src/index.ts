@@ -5,7 +5,7 @@
  * @remarks
  * A minimal, TypeScript-first alternative to zoid with zero runtime dependencies.
  * Enables rendering components in iframes or popups across domains while
- * seamlessly passing props (including functions) between parent and child.
+ * seamlessly passing props (including functions) between consumer and host.
  *
  * @example
  * ```typescript
@@ -35,9 +35,9 @@ import {
   destroy,
   destroyComponents,
   destroyAll,
-  isChild,
+  isHost,
   getXProps,
-  initChild,
+  initHost,
 } from './core';
 
 // Constants
@@ -52,9 +52,9 @@ import {
 // Errors
 import { PopupOpenError } from './render/popup';
 
-// Auto-initialize child if in a ForgeFrame window.
-// This makes window.xprops available automatically in child contexts.
-initChild();
+// Auto-initialize host if in a ForgeFrame window.
+// This makes window.xprops available automatically in host contexts.
+initHost();
 
 /**
  * Main ForgeFrame API object.
@@ -120,16 +120,16 @@ export const ForgeFrame = {
   destroyAll,
 
   /**
-   * Check if the current window is a child component context.
+   * Check if the current window is a host component context.
    *
    * @returns True if running inside a ForgeFrame iframe/popup
    */
-  isChild,
+  isHost,
 
   /**
-   * Get xprops from the current child window.
+   * Get xprops from the current host window.
    *
-   * @returns The xprops object if in child context, undefined otherwise
+   * @returns The xprops object if in host context, undefined otherwise
    */
   getXProps,
 
@@ -180,7 +180,7 @@ export {
   destroy,
   destroyComponents,
   destroyAll,
-  isChild,
+  isHost,
   getXProps,
 } from './core';
 
@@ -200,7 +200,7 @@ export type {
   ComponentOptions,
   ForgeFrameComponent,
   ForgeFrameComponentInstance,
-  ChildProps,
+  HostProps,
 
   // Props types
   PropDefinition,

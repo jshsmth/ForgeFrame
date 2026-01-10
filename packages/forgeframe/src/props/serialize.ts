@@ -4,7 +4,7 @@
  *
  * @remarks
  * This module handles serializing and deserializing props for transfer
- * between parent and child windows across domain boundaries.
+ * between consumer and host windows across domain boundaries.
  */
 
 import type { PropDefinition, PropsDefinition, SerializedProps } from '../types';
@@ -183,19 +183,19 @@ function serializeValue(
 }
 
 /**
- * Deserializes props received from the parent.
+ * Deserializes props received from the consumer.
  *
  * @remarks
  * Function references are converted back to callable functions that
  * invoke the original via postMessage.
  *
  * @typeParam P - The props type
- * @param serialized - Serialized props from parent
+ * @param serialized - Serialized props from consumer
  * @param definitions - Prop definitions
  * @param messenger - Messenger for function calls
  * @param bridge - Function bridge for deserializing functions
- * @param parentWin - Parent window reference
- * @param parentDomain - Parent origin domain
+ * @param consumerWin - Consumer window reference
+ * @param consumerDomain - Consumer origin domain
  * @returns Deserialized props
  *
  * @public
@@ -205,8 +205,8 @@ export function deserializeProps<P extends Record<string, unknown>>(
   definitions: PropsDefinition<P>,
   messenger: Messenger,
   bridge: FunctionBridge,
-  parentWin: Window,
-  parentDomain: string
+  consumerWin: Window,
+  consumerDomain: string
 ): P {
   const allDefs = {
     ...BUILTIN_PROP_DEFINITIONS,
@@ -223,8 +223,8 @@ export function deserializeProps<P extends Record<string, unknown>>(
       definition,
       messenger,
       bridge,
-      parentWin,
-      parentDomain
+      consumerWin,
+      consumerDomain
     );
   }
 
@@ -240,8 +240,8 @@ function deserializeValue(
   _definition: PropDefinition | undefined,
   _messenger: Messenger,
   bridge: FunctionBridge,
-  parentWin: Window,
-  parentDomain: string
+  consumerWin: Window,
+  consumerDomain: string
 ): unknown {
   if (isBase64Encoded(value)) {
     try {
@@ -260,7 +260,7 @@ function deserializeValue(
     }
   }
 
-  return deserializeFunctions(value, bridge, parentWin, parentDomain);
+  return deserializeFunctions(value, bridge, consumerWin, consumerDomain);
 }
 
 /**

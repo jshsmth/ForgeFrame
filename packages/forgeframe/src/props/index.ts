@@ -16,7 +16,7 @@ export {
 export {
   normalizeProps,
   validateProps,
-  getPropsForChild,
+  getPropsForHost,
   propsToQueryParams,
 } from './normalize';
 

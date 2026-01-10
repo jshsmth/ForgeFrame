@@ -8,8 +8,8 @@
   "scripts": {
     "clean": "npm run clean -w forgeframe && npm run clean -w @forgeframe/playground",
     "dev": "npm run dev -w @forgeframe/playground",
-    "dev:parent": "npm run dev:parent -w @forgeframe/playground",
-    "dev:child": "npm run dev:child -w @forgeframe/playground",
+    "dev:consumer": "npm run dev:consumer -w @forgeframe/playground",
+    "dev:host": "npm run dev:host -w @forgeframe/playground",
     "build": "npm run build -w forgeframe",
     "build:playground": "npm run build -w @forgeframe/playground",
     "typecheck": "npm run typecheck -w forgeframe",

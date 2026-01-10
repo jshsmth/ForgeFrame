@@ -215,14 +215,14 @@ export async function renderComponent(parseConfig: () => PlaygroundConfig | null
     const props: DynamicProps = {
       ...currentPropValues,
       onGreet: (message: string) => {
-        log(`Child says: ${message}`, 'success');
+        log(`Host says: ${message}`, 'success');
       },
       onClose: () => {
-        log('Child requested close', 'info');
+        log('Host requested close', 'info');
         instance?.close();
       },
       onError: (error: Error) => {
-        log(`Child error: ${error.message}`, 'error');
+        log(`Host error: ${error.message}`, 'error');
       },
     };
 

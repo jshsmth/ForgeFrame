@@ -4,7 +4,7 @@
  *
  * @remarks
  * This module provides the postMessage-based communication layer for
- * cross-domain parent-child component interaction. It includes message
+ * cross-domain consumer-host component interaction. It includes message
  * serialization, function bridging, and request/response handling.
  */
 

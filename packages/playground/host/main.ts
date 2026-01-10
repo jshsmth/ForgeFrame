@@ -1,14 +1,14 @@
 /**
- * Child Component Example
+ * Host Component Example
  *
- * This demonstrates how to use ForgeFrame from the child (embedded) side.
- * The child receives props from the parent via window.xprops.
+ * This demonstrates how to use ForgeFrame from the host (embedded) side.
+ * The host receives props from the consumer via window.xprops.
  */
-import ForgeFrame, { type ChildProps } from "forgeframe";
+import ForgeFrame, { type HostProps } from "forgeframe";
 
 /**
  * Define your custom props interface.
- * These are the props passed from the parent component.
+ * These are the props passed from the consumer component.
  */
 interface MyProps {
   name: string;
@@ -19,15 +19,15 @@ interface MyProps {
 }
 
 /**
- * Type window.xprops using ForgeFrame's ChildProps generic.
- * ChildProps<MyProps> includes:
+ * Type window.xprops using ForgeFrame's HostProps generic.
+ * HostProps<MyProps> includes:
  * - All your custom props (name, count, onGreet, etc.)
  * - Built-in ForgeFrame methods (close, resize, focus, show, hide, export, etc.)
- * - Context info (uid, tag, getParentDomain, etc.)
+ * - Context info (uid, tag, getConsumerDomain, etc.)
  */
 declare global {
   interface Window {
-    xprops?: ChildProps<MyProps>;
+    xprops?: HostProps<MyProps>;
   }
 }
 
@@ -38,16 +38,16 @@ const app = document.getElementById("app")!;
  */
 function renderEmbedded() {
   // window.xprops is provided by ForgeFrame and contains:
-  // - All props passed from parent (name, count, onGreet, etc.)
+  // - All props passed from consumer (name, count, onGreet, etc.)
   // - Built-in methods (close, resize, focus, show, hide, export, etc.)
-  // - Context info (uid, tag, getParentDomain, etc.)
+  // - Context info (uid, tag, getConsumerDomain, etc.)
   const xprops = window.xprops!;
 
   // Built-in xprops keys to exclude from "Received Props"
   const builtInKeys = new Set([
     'uid', 'tag', 'close', 'focus', 'resize', 'show', 'hide',
-    'onProps', 'onError', 'getParent', 'getParentDomain', 'export',
-    'parent', 'getSiblings', 'children'
+    'onProps', 'onError', 'getConsumer', 'getConsumerDomain', 'export',
+    'consumer', 'getSiblings', 'children'
   ]);
 
   const getUserProps = () => {
@@ -72,7 +72,7 @@ function renderEmbedded() {
   const render = () => {
     app.innerHTML = `
       <div class="header">
-        <h2><span>Child</span> Component</h2>
+        <h2><span>Host</span> Component</h2>
         <span class="badge">${xprops.tag}</span>
       </div>
 
@@ -92,14 +92,14 @@ function renderEmbedded() {
             <dl class="props-grid">
               <dt>uid</dt>
               <dd>${xprops.uid.slice(0, 12)}...</dd>
-              <dt>parent</dt>
-              <dd>${xprops.getParentDomain()}</dd>
+              <dt>consumer</dt>
+              <dd>${xprops.getConsumerDomain()}</dd>
             </dl>
           </div>
         </div>
 
         <div class="card full">
-          <h3>Call Parent Functions</h3>
+          <h3>Call Consumer Functions</h3>
           <div class="card-content">
             <div class="buttons">
               <div class="button-group">
@@ -171,15 +171,15 @@ function renderEmbedded() {
   };
 
   const bindEventHandlers = () => {
-    // Call parent function prop
+    // Call consumer function prop
     document.getElementById("btn-greet")?.addEventListener("click", () => {
       // xprops.name and xprops.count are always current (updated by ForgeFrame)
       const message = `Hello! Name: ${xprops.name}, Count: ${xprops.count}`;
       xprops.onGreet(message);
-      setStatus("Sent greeting to parent");
+      setStatus("Sent greeting to consumer");
     });
 
-    // Export data to parent
+    // Export data to consumer
     document
       .getElementById("btn-export")
       ?.addEventListener("click", async () => {
@@ -187,16 +187,16 @@ function renderEmbedded() {
           exportedAt: new Date().toISOString(),
           data: { name: xprops.name, count: xprops.count },
         });
-        setStatus("Exported data to parent");
+        setStatus("Exported data to consumer");
       });
 
-    // Report error to parent
+    // Report error to consumer
     document.getElementById("btn-error")?.addEventListener("click", () => {
-      xprops.onError(new Error("Test error from child"));
-      setStatus("Reported error to parent");
+      xprops.onError(new Error("Test error from host"));
+      setStatus("Reported error to consumer");
     });
 
-    // Request close (calls parent's onClose callback)
+    // Request close (calls consumer's onClose callback)
     document.getElementById("btn-close")?.addEventListener("click", () => {
       xprops.onClose();
     });
@@ -227,16 +227,16 @@ function renderEmbedded() {
     // Hide the iframe
     document.getElementById("btn-hide")?.addEventListener("click", async () => {
       await xprops.hide();
-      setStatus("Hidden (use parent Show button)");
+      setStatus("Hidden (use consumer Show button)");
     });
   };
 
   // Initial render
   render();
 
-  // Listen for prop updates from parent
+  // Listen for prop updates from consumer
   xprops.onProps((newProps) => {
-    console.log("[Child] Props updated:", newProps);
+    console.log("[Host] Props updated:", newProps);
     // Update UI with new values - handle any prop dynamically
     for (const [key, value] of Object.entries(newProps)) {
       const el = document.getElementById(`prop-${key}`);
@@ -247,7 +247,7 @@ function renderEmbedded() {
     setStatus("Props updated");
   });
 
-  // Export initial data to parent
+  // Export initial data to consumer
   xprops.export({ ready: true, timestamp: Date.now() });
 }
 
@@ -255,19 +255,19 @@ function renderEmbedded() {
  * Render when opened directly (not embedded)
  */
 function renderStandalone() {
-  const parentUrl = import.meta.env.VITE_PARENT_URL || 'https://localhost:5173';
+  const consumerUrl = import.meta.env.VITE_CONSUMER_URL || 'https://localhost:5173';
   app.innerHTML = `
     <div class="not-embedded">
-      <h2>Child Component</h2>
+      <h2>Host Component</h2>
       <p>This page is designed to be embedded via ForgeFrame.</p>
-      <p>Open <code>${parentUrl}</code> and click <strong>Render</strong>.</p>
+      <p>Open <code>${consumerUrl}</code> and click <strong>Render</strong>.</p>
       <p class="hint">window.xprops is not available (no ForgeFrame payload)</p>
     </div>
   `;
 }
 
-// Check if running as ForgeFrame child
-if (ForgeFrame.isChild()) {
+// Check if running as ForgeFrame host
+if (ForgeFrame.isHost()) {
   renderEmbedded();
 } else {
   renderStandalone();

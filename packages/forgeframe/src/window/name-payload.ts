@@ -1,4 +1,4 @@
-import type { WindowNamePayload, SerializedProps, ParentExports, ChildComponentRef } from '../types';
+import type { WindowNamePayload, SerializedProps, ConsumerExports, HostComponentRef } from '../types';
 import type { ContextType } from '../constants';
 import { WINDOW_NAME_PREFIX, VERSION } from '../constants';
 
@@ -17,18 +17,18 @@ const MAX_PAYLOAD_SIZE = 32 * 1024;
  * @returns A window name string with the ForgeFrame prefix and base64-encoded payload.
  *
  * @remarks
- * This is the primary mechanism for passing initial props from a parent window
- * to a child window (iframe or popup). The payload is JSON-serialized and base64-encoded
+ * This is the primary mechanism for passing initial props from a consumer window
+ * to a host window (iframe or popup). The payload is JSON-serialized and base64-encoded
  * to ensure safe transport via the window.name property.
  *
  * @example
  * ```typescript
  * const payload: WindowNamePayload<MyProps> = {
- *   uid: 'child-123',
+ *   uid: 'host-123',
  *   tag: 'my-component',
  *   version: '1.0.0',
  *   context: 'iframe',
- *   parentDomain: 'https://parent.com',
+ *   consumerDomain: 'https://consumer.com',
  *   props: { message: 'Hello' },
  *   exports: {}
  * };
@@ -58,11 +58,11 @@ export function buildWindowName<P>(payload: WindowNamePayload<P>): string {
  *
  * @example
  * ```typescript
- * // In a child window
+ * // In a host window
  * const payload = parseWindowName<MyProps>(window.name);
  * if (payload) {
  *   console.log('Received props:', payload.props);
- *   console.log('Parent domain:', payload.parentDomain);
+ *   console.log('Consumer domain:', payload.consumerDomain);
  * }
  * ```
  *
@@ -80,13 +80,13 @@ export function parseWindowName<P>(
 }
 
 /**
- * Checks if the specified window is a ForgeFrame child window.
+ * Checks if the specified window is a ForgeFrame host window.
  *
  * @param win - The window to check. Defaults to the current window.
  * @returns `true` if the window's name starts with the ForgeFrame prefix, `false` otherwise.
  *
  * @remarks
- * A ForgeFrame child window is identified by having a window name that starts
+ * A ForgeFrame host window is identified by having a window name that starts
  * with the ForgeFrame prefix. This function safely handles cross-origin errors.
  *
  * @example
@@ -108,7 +108,7 @@ export function isForgeFrameWindow(win: Window = window): boolean {
 }
 
 /**
- * Checks if the current window is a child of a specific component tag.
+ * Checks if the current window is a host of a specific component tag.
  *
  * @param tag - The component tag to check for.
  * @param win - The window to check. Defaults to the current window.
@@ -120,14 +120,14 @@ export function isForgeFrameWindow(win: Window = window): boolean {
  *
  * @example
  * ```typescript
- * if (isChildOfComponent('payment-form')) {
+ * if (isHostOfComponent('payment-form')) {
  *   // Initialize payment-specific features
  * }
  * ```
  *
  * @public
  */
-export function isChildOfComponent(
+export function isHostOfComponent(
   tag: string,
   win: Window = window
 ): boolean {
@@ -202,13 +202,13 @@ function decodePayload<P>(encoded: string): WindowNamePayload<P> | null {
  *
  * @typeParam P - The type of the props (used for type inference in the returned payload).
  * @param options - The options for creating the payload.
- * @param options.uid - Unique identifier for the child window.
+ * @param options.uid - Unique identifier for the host window.
  * @param options.tag - Component tag name.
  * @param options.context - The context type (e.g., 'iframe' or 'popup').
- * @param options.parentDomain - The origin of the parent window.
- * @param options.props - Serialized props to pass to the child.
- * @param options.exports - Functions exported by the parent for the child to call.
- * @param options.children - Optional map of child component references.
+ * @param options.consumerDomain - The origin of the consumer window.
+ * @param options.props - Serialized props to pass to the host.
+ * @param options.exports - Functions exported by the consumer for the host to call.
+ * @param options.children - Optional map of nested component references.
  * @returns A WindowNamePayload object ready for encoding.
  *
  * @remarks
@@ -221,7 +221,7 @@ function decodePayload<P>(encoded: string): WindowNamePayload<P> | null {
  *   uid: generateUID(),
  *   tag: 'checkout-form',
  *   context: 'iframe',
- *   parentDomain: window.location.origin,
+ *   consumerDomain: window.location.origin,
  *   props: { amount: 100 },
  *   exports: { onSuccess: true, onError: true }
  * });
@@ -235,17 +235,17 @@ export function createWindowPayload<P>(options: {
   uid: string;
   tag: string;
   context: ContextType;
-  parentDomain: string;
+  consumerDomain: string;
   props: SerializedProps;
-  exports: ParentExports;
-  children?: Record<string, ChildComponentRef>;
+  exports: ConsumerExports;
+  children?: Record<string, HostComponentRef>;
 }): WindowNamePayload<P> {
   return {
     uid: options.uid,
     tag: options.tag,
     version: VERSION,
     context: options.context,
-    parentDomain: options.parentDomain,
+    consumerDomain: options.consumerDomain,
     props: options.props,
     exports: options.exports,
     children: options.children,
@@ -260,14 +260,14 @@ export function createWindowPayload<P>(options: {
  * @param payload - The new payload to encode into the window name.
  *
  * @remarks
- * This function is used when the parent needs to update the child's reference
+ * This function is used when the consumer needs to update the host's reference
  * or pass updated data. It safely handles cross-origin errors by silently failing.
  *
  * @example
  * ```typescript
- * // Update child window with new props
+ * // Update host window with new props
  * const updatedPayload = { ...existingPayload, props: { newValue: 42 } };
- * updateWindowName(childWindow, updatedPayload);
+ * updateWindowName(hostWindow, updatedPayload);
  * ```
  *
  * @public
@@ -291,16 +291,16 @@ export function updateWindowName<P>(
  * @returns The decoded WindowNamePayload, or `null` if not a ForgeFrame window.
  *
  * @remarks
- * This is a convenience function typically used by child components during
- * initialization to read the data passed by the parent window.
+ * This is a convenience function typically used by host components during
+ * initialization to read the data passed by the consumer window.
  *
  * @example
  * ```typescript
- * // In child window initialization
+ * // In host window initialization
  * const payload = getInitialPayload<MyProps>();
  * if (payload) {
  *   initializeComponent(payload.props);
- *   setupParentCommunication(payload.parentDomain);
+ *   setupConsumerCommunication(payload.consumerDomain);
  * }
  * ```
  *

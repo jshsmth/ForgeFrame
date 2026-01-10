@@ -8,7 +8,7 @@ import {
   destroyAll,
   unregisterComponent,
 } from '@/core/component';
-import { isChild, getXProps } from '@/core/child';
+import { isHost, getXProps } from '@/core/host';
 import { PROP_TYPE, CONTEXT } from '@/constants';
 
 describe('Component Creation', () => {
@@ -24,7 +24,7 @@ describe('Component Creation', () => {
 
     expect(MyComponent).toBeDefined();
     expect(typeof MyComponent).toBe('function');
-    expect(MyComponent.isChild()).toBe(false);
+    expect(MyComponent.isHost()).toBe(false);
     expect(MyComponent.instances).toEqual([]);
   });
 
@@ -379,20 +379,20 @@ describe('Component Destruction', () => {
   });
 });
 
-describe('Child Context Detection', () => {
+describe('Host Context Detection', () => {
   afterEach(() => {
     clearComponents();
   });
 
-  describe('isChild', () => {
-    it('should return false when not in a ForgeFrame child window', () => {
-      // In normal test environment, we're not in a child window
-      expect(isChild()).toBe(false);
+  describe('isHost', () => {
+    it('should return false when not in a ForgeFrame host window', () => {
+      // In normal test environment, we're not in a host window
+      expect(isHost()).toBe(false);
     });
   });
 
   describe('getXProps', () => {
-    it('should return undefined when not in a child context', () => {
+    it('should return undefined when not in a host context', () => {
       const xprops = getXProps();
       expect(xprops).toBeUndefined();
     });
@@ -410,10 +410,10 @@ describe('Child Context Detection', () => {
         hide: vi.fn(),
         onProps: vi.fn(),
         onError: vi.fn(),
-        getParent: vi.fn(),
-        getParentDomain: vi.fn(),
+        getConsumer: vi.fn(),
+        getConsumerDomain: vi.fn(),
         export: vi.fn(),
-        parent: { props: {}, export: vi.fn() },
+        consumer: { props: {}, export: vi.fn() },
         getSiblings: vi.fn(),
       };
 
@@ -427,14 +427,14 @@ describe('Child Context Detection', () => {
     });
   });
 
-  describe('Component.isChild', () => {
-    it('should return false when not in component child context', () => {
+  describe('Component.isHost', () => {
+    it('should return false when not in component host context', () => {
       const MyComponent = create({
-        tag: 'child-check-component',
+        tag: 'host-check-component',
         url: 'https://example.com',
       });
 
-      expect(MyComponent.isChild()).toBe(false);
+      expect(MyComponent.isHost()).toBe(false);
     });
   });
 

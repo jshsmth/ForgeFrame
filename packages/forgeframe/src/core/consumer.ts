@@ -1,10 +1,11 @@
 /**
  * @packageDocumentation
- * Parent component implementation module.
+ * Consumer component implementation module.
  *
  * @remarks
- * This module contains the ParentComponent class which handles the host-side
- * rendering and communication with child components embedded in iframes or popups.
+ * This module contains the ConsumerComponent class which handles the consumer-side
+ * (the app embedding the component) rendering and communication with host components
+ * embedded in iframes or popups.
  */
 
 import type {
@@ -13,10 +14,10 @@ import type {
   Dimensions,
   PropsDefinition,
   TemplateContext,
-  ParentExports,
+  ConsumerExports,
   SiblingInfo,
   GetSiblingsOptions,
-  ChildComponentRef,
+  HostComponentRef,
   ForgeFrameComponent,
 } from '../types';
 import type { ContextType } from '../constants';
@@ -37,7 +38,7 @@ import { registerWindow, unregisterWindow } from '../window/proxy';
 import {
   normalizeProps,
   validateProps,
-  getPropsForChild,
+  getPropsForHost,
   serializeProps,
   propsToQueryParams,
 } from '../props';
@@ -74,7 +75,7 @@ interface NormalizedOptions<P> {
   dimensions: Dimensions;
   timeout: number;
   domain?: ComponentOptions<P>['domain'];
-  allowedParentDomains?: ComponentOptions<P>['allowedParentDomains'];
+  allowedConsumerDomains?: ComponentOptions<P>['allowedConsumerDomains'];
   containerTemplate?: ComponentOptions<P>['containerTemplate'];
   prerenderTemplate?: ComponentOptions<P>['prerenderTemplate'];
   eligible?: ComponentOptions<P>['eligible'];
@@ -86,25 +87,25 @@ interface NormalizedOptions<P> {
 }
 
 /**
- * Parent-side component implementation.
+ * Consumer-side component implementation.
  *
  * @remarks
- * This class manages the lifecycle of a component from the host page perspective.
+ * This class manages the lifecycle of a component from the consumer (embedding app) perspective.
  * It handles rendering the component into iframes or popups, communicating with
- * the child window via postMessage, and managing component state.
+ * the host window via postMessage, and managing component state.
  *
  * @typeParam P - The props type passed to the component
- * @typeParam X - The exports type that the child can expose to the parent
+ * @typeParam X - The exports type that the host can expose to the consumer
  *
  * @example
  * ```typescript
- * const instance = new ParentComponent(options, { email: 'user@example.com' });
+ * const instance = new ConsumerComponent(options, { email: 'user@example.com' });
  * await instance.render('#container');
  * ```
  *
  * @public
  */
-export class ParentComponent<P extends Record<string, unknown>, X = unknown>
+export class ConsumerComponent<P extends Record<string, unknown>, X = unknown>
   implements ForgeFrameComponentInstance<P, X>
 {
   /** Event emitter for lifecycle events. */
@@ -113,11 +114,11 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   /** Arbitrary state storage for the component instance. */
   public state: Record<string, unknown> = {};
 
-  /** Data exported by the child component. */
+  /** Data exported by the host component. */
   public exports?: X;
 
-  /** Data exported from the parent by the child. */
-  public parentExports?: unknown;
+  /** Data exported from the consumer by the host. */
+  public consumerExports?: unknown;
 
   /** @internal */
   private _uid: string;
@@ -149,7 +150,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   private cleanup: CleanupManager;
 
   /** @internal */
-  private childWindow: Window | null = null;
+  private hostWindow: Window | null = null;
 
   /** @internal */
   private iframe: HTMLIFrameElement | null = null;
@@ -170,7 +171,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   private destroyed = false;
 
   /**
-   * Creates a new ParentComponent instance.
+   * Creates a new ConsumerComponent instance.
    *
    * @param options - Component configuration options
    * @param props - Initial props to pass to the component
@@ -231,7 +232,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
    *
    * @remarks
    * This is the primary method for displaying the component. It creates
-   * an iframe or popup, establishes communication with the child, and
+   * an iframe or popup, establishes communication with the host, and
    * handles the prerender/render lifecycle.
    *
    * @param container - CSS selector or HTMLElement to render into
@@ -274,7 +275,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
     this.callPropCallback('onRender');
 
     await this.open();
-    await this.waitForChild();
+    await this.waitForHost();
 
     if (this.context === CONTEXT.IFRAME && this.iframe && this.prerenderElement) {
       await swapPrerenderContent(
@@ -338,8 +339,8 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   async focus(): Promise<void> {
     if (this.context === CONTEXT.IFRAME && this.iframe) {
       focusIframe(this.iframe);
-    } else if (this.context === CONTEXT.POPUP && this.childWindow) {
-      focusPopup(this.childWindow);
+    } else if (this.context === CONTEXT.POPUP && this.hostWindow) {
+      focusPopup(this.hostWindow);
     }
 
     this.event.emit(EVENT.FOCUS);
@@ -354,8 +355,8 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   async resize(dimensions: Dimensions): Promise<void> {
     if (this.context === CONTEXT.IFRAME && this.iframe) {
       resizeIframe(this.iframe, dimensions);
-    } else if (this.context === CONTEXT.POPUP && this.childWindow) {
-      resizePopup(this.childWindow, dimensions);
+    } else if (this.context === CONTEXT.POPUP && this.hostWindow) {
+      resizePopup(this.hostWindow, dimensions);
     }
 
     this.event.emit(EVENT.RESIZE, dimensions);
@@ -387,10 +388,10 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   }
 
   /**
-   * Updates the component props and sends them to the child.
+   * Updates the component props and sends them to the host.
    *
    * @remarks
-   * Props are normalized and serialized before being sent to the child window.
+   * Props are normalized and serialized before being sent to the host window.
    *
    * @param newProps - Partial props object to merge with existing props
    */
@@ -402,23 +403,23 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       propContext
     );
 
-    if (this.childWindow && !isWindowClosed(this.childWindow)) {
-      const childDomain = this.getChildDomain();
-      const propsForChild = getPropsForChild(
+    if (this.hostWindow && !isWindowClosed(this.hostWindow)) {
+      const hostDomain = this.getHostDomain();
+      const propsForHost = getPropsForHost(
         this.props,
         this.options.props,
-        childDomain,
-        isSameDomain(this.childWindow)
+        hostDomain,
+        isSameDomain(this.hostWindow)
       );
       const serialized = serializeProps(
-        propsForChild as Record<string, unknown>,
+        propsForHost as Record<string, unknown>,
         this.options.props as PropsDefinition<Record<string, unknown>>,
         this.bridge
       );
 
       await this.messenger.send(
-        this.childWindow,
-        childDomain,
+        this.hostWindow,
+        hostDomain,
         MESSAGE_NAME.PROPS,
         serialized
       );
@@ -434,7 +435,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
    * @returns A new unrendered component instance with identical configuration
    */
   clone(): ForgeFrameComponentInstance<P, X> {
-    return new ParentComponent(this.options, this.props);
+    return new ConsumerComponent(this.options, this.props);
   }
 
   /**
@@ -592,7 +593,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
 
   /**
    * Creates an iframe element without setting src (for prerender phase).
-   * The window name is set immediately as it carries the payload for the child.
+   * The window name is set immediately as it carries the payload for the host.
    * @internal
    */
   private createIframeElement(windowName: string): HTMLIFrameElement {
@@ -605,7 +606,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       ? this.options.style(this.props)
       : this.options.style ?? {};
 
-    // Set name first - carries the payload that child reads from window.name
+    // Set name first - carries the payload that host reads from window.name
     iframe.name = windowName;
     iframe.setAttribute('frameborder', '0');
     iframe.setAttribute('allowtransparency', 'true');
@@ -652,7 +653,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   }
 
   /**
-   * Opens the child window (iframe or popup).
+   * Opens the host window (iframe or popup).
    * @internal
    */
   private async open(): Promise<void> {
@@ -666,28 +667,28 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       }
 
       this.iframe.src = url;
-      this.childWindow = this.iframe.contentWindow;
+      this.hostWindow = this.iframe.contentWindow;
     } else {
       const windowName = this.buildWindowName();
-      this.childWindow = openPopup({
+      this.hostWindow = openPopup({
         url,
         name: windowName,
         dimensions: this.options.dimensions,
       });
 
-      const stopWatching = watchPopupClose(this.childWindow, () => {
+      const stopWatching = watchPopupClose(this.hostWindow, () => {
         this.destroy();
       });
       this.cleanup.register(stopWatching);
     }
 
-    if (this.childWindow) {
-      registerWindow(this.uid, this.childWindow);
+    if (this.hostWindow) {
+      registerWindow(this.uid, this.hostWindow);
     }
   }
 
   /**
-   * Builds the URL for the child window including query parameters.
+   * Builds the URL for the host window including query parameters.
    * @internal
    */
   private buildUrl(): string {
@@ -706,50 +707,50 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   }
 
   /**
-   * Builds the window.name payload for the child window.
+   * Builds the window.name payload for the host window.
    * @internal
    */
   private buildWindowName(): string {
-    const childDomain = this.getChildDomain();
-    const propsForChild = getPropsForChild(
+    const hostDomain = this.getHostDomain();
+    const propsForHost = getPropsForHost(
       this.props,
       this.options.props,
-      childDomain,
+      hostDomain,
       false // Assume cross-domain for initial payload
     );
 
     const serializedProps = serializeProps(
-      propsForChild as Record<string, unknown>,
+      propsForHost as Record<string, unknown>,
       this.options.props as PropsDefinition<Record<string, unknown>>,
       this.bridge
     );
 
-    const childrenRefs = this.buildChildrenRefs();
+    const nestedHostRefs = this.buildNestedHostRefs();
 
     const payload = createWindowPayload({
       uid: this.uid,
       tag: this.options.tag,
       context: this.context,
-      parentDomain: getDomain(),
+      consumerDomain: getDomain(),
       props: serializedProps,
-      exports: this.createParentExports(),
-      children: childrenRefs,
+      exports: this.createConsumerExports(),
+      children: nestedHostRefs,
     });
 
     return buildWindowName(payload);
   }
 
   /**
-   * Builds component references for nested child components.
+   * Builds component references for nested host components.
    * @internal
    */
-  private buildChildrenRefs(): Record<string, ChildComponentRef> | undefined {
+  private buildNestedHostRefs(): Record<string, HostComponentRef> | undefined {
     if (!this.options.children) return undefined;
 
-    const childComponents = this.options.children({ props: this.props });
-    const refs: Record<string, ChildComponentRef> = {};
+    const nestedComponents = this.options.children({ props: this.props });
+    const refs: Record<string, HostComponentRef> = {};
 
-    for (const [name, component] of Object.entries(childComponents)) {
+    for (const [name, component] of Object.entries(nestedComponents)) {
       const componentAny = component as ForgeFrameComponent & {
         _options?: ComponentOptions<Record<string, unknown>>;
         tag?: string;
@@ -768,10 +769,10 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   }
 
   /**
-   * Creates the exports object sent to the child.
+   * Creates the exports object sent to the host.
    * @internal
    */
-  private createParentExports(): ParentExports {
+  private createConsumerExports(): ConsumerExports {
     return {
       init: MESSAGE_NAME.INIT,
       close: MESSAGE_NAME.CLOSE,
@@ -788,7 +789,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
    * Extracts the origin domain from the component URL.
    * @internal
    */
-  private getChildDomain(): string {
+  private getHostDomain(): string {
     const url =
       typeof this.options.url === 'function'
         ? this.options.url(this.props)
@@ -802,18 +803,18 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   }
 
   /**
-   * Waits for the child to send the init message.
+   * Waits for the host to send the init message.
    * @internal
    */
-  private async waitForChild(): Promise<void> {
+  private async waitForHost(): Promise<void> {
     this.initPromise = createDeferred<void>();
 
     try {
       await promiseTimeout(
         this.initPromise.promise,
         this.options.timeout,
-        `Child component "${this.options.tag}" (uid: ${this._uid}) did not initialize within ${this.options.timeout}ms. ` +
-        `Check that the child page loads correctly and calls the initialization code.`
+        `Host component "${this.options.tag}" (uid: ${this._uid}) did not initialize within ${this.options.timeout}ms. ` +
+        `Check that the host page loads correctly and calls the initialization code.`
       );
     } catch (err) {
       this.handleError(err as Error);
@@ -822,7 +823,7 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
   }
 
   /**
-   * Sets up message handlers for child communication.
+   * Sets up message handlers for host communication.
    * @internal
    */
   private setupMessageHandlers(): void {
@@ -873,8 +874,8 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       return { success: true };
     });
 
-    this.messenger.on<unknown>(MESSAGE_NAME.PARENT_EXPORT, async (data) => {
-      this.parentExports = data;
+    this.messenger.on<unknown>(MESSAGE_NAME.CONSUMER_EXPORT, async (data) => {
+      this.consumerExports = data;
       return { success: true };
     });
 
@@ -965,11 +966,11 @@ export class ParentComponent<P extends Record<string, unknown>, X = unknown>
       this.iframe = null;
     }
 
-    if (this.context === CONTEXT.POPUP && this.childWindow) {
-      closePopup(this.childWindow);
+    if (this.context === CONTEXT.POPUP && this.hostWindow) {
+      closePopup(this.hostWindow);
     }
 
-    this.childWindow = null;
+    this.hostWindow = null;
 
     if (this.prerenderElement) {
       this.prerenderElement.remove();

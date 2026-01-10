@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "clean": "rm -rf dist",
-    "dev": "concurrently \"npm run dev:parent\" \"npm run dev:child\"",
-    "dev:parent": "vite --config vite.config.parent.ts",
-    "dev:child": "vite --config vite.config.child.ts",
-    "build": "npm run build:parent && npm run build:child",
-    "build:parent": "vite build --config vite.config.parent.ts",
-    "build:child": "vite build --config vite.config.child.ts"
+    "dev": "concurrently \"npm run dev:consumer\" \"npm run dev:host\"",
+    "dev:consumer": "vite --config vite.config.consumer.ts",
+    "dev:host": "vite --config vite.config.host.ts",
+    "build": "npm run build:consumer && npm run build:host",
+    "build:consumer": "vite build --config vite.config.consumer.ts",
+    "build:host": "vite build --config vite.config.host.ts"
   },
   "dependencies": {
     "forgeframe": "*"
