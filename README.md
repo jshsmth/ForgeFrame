@@ -18,12 +18,12 @@ ForgeFrame lets you embed components from different domains while passing data a
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Step-by-Step Guide](#step-by-step-guide)
-  - [1. Define a Component](#1-define-a-component-parent)
-  - [2. Create the Child Page](#2-create-the-child-page)
+  - [1. Define a Component](#1-define-a-component-consumer)
+  - [2. Create the Host Page](#2-create-the-host-page)
   - [3. Render the Component](#3-render-the-component)
   - [4. Handle Events](#4-handle-events)
 - [Props System](#props-system)
-- [Child Window API (xprops)](#child-window-api-xprops)
+- [Host Window API (xprops)](#host-window-api-xprops)
 - [Templates](#templates)
 - [React Integration](#react-integration)
 - [Advanced Features](#advanced-features)
@@ -51,7 +51,7 @@ pnpm add forgeframe
 
 ## Quick Start
 
-### Parent Page (your app)
+### Consumer Page (your app)
 
 ```typescript
 import ForgeFrame from 'forgeframe';
@@ -76,16 +76,16 @@ const payment = PaymentForm({
 await payment.render('#payment-container');
 ```
 
-### Child Page (embedded iframe)
+### Host Page (embedded iframe)
 
 ```typescript
-// The child automatically receives props via window.xprops
+// The host automatically receives props via window.xprops
 const { amount, onSuccess, close } = window.xprops;
 
 // Use the props
 document.getElementById('total').textContent = `$${amount}`;
 
-// Call parent callbacks
+// Call consumer callbacks
 document.getElementById('pay-btn').onclick = async () => {
   await onSuccess({ transactionId: 'TXN_123' });
   await close();
@@ -98,7 +98,7 @@ That's it! ForgeFrame handles all the cross-domain communication automatically.
 
 ## Step-by-Step Guide
 
-### 1. Define a Component (Parent)
+### 1. Define a Component (Consumer)
 
 Components are defined using `ForgeFrame.create()`. This creates a reusable component factory.
 
@@ -117,7 +117,7 @@ const LoginForm = ForgeFrame.create<LoginProps>({
   // Required: unique identifier
   tag: 'login-form',
 
-  // Required: URL of the child page
+  // Required: URL of the host page
   url: 'https://auth.example.com/login',
 
   // Optional: dimensions
@@ -139,9 +139,9 @@ const LoginForm = ForgeFrame.create<LoginProps>({
 });
 ```
 
-### 2. Create the Child Page
+### 2. Create the Host Page
 
-The child page runs inside the iframe. It receives props via `window.xprops`.
+The host page runs inside the iframe. It receives props via `window.xprops`.
 
 ```html
 <!-- https://auth.example.com/login -->
@@ -159,7 +159,7 @@ The child page runs inside the iframe. It receives props via `window.xprops`.
   </form>
 
   <script type="module">
-    // window.xprops is automatically available in ForgeFrame children
+    // window.xprops is automatically available in ForgeFrame hosts
     const { email, onLogin, onCancel, close } = window.xprops;
 
     // Pre-fill email if provided
@@ -171,7 +171,7 @@ The child page runs inside the iframe. It receives props via `window.xprops`.
     document.getElementById('login-form').onsubmit = async (e) => {
       e.preventDefault();
 
-      // Call the parent's callback
+      // Call the consumer's callback
       await onLogin({
         id: 1,
         name: 'John Doe',
@@ -345,10 +345,10 @@ await instance.render('#container');
 await instance.updateProps({ name: 'Updated' });
 ```
 
-The child receives updates via `onProps`:
+The host receives updates via `onProps`:
 
 ```typescript
-// In child
+// In host
 window.xprops.onProps((newProps) => {
   console.log('Props updated:', newProps);
   // Re-render your UI with new props
@@ -357,14 +357,14 @@ window.xprops.onProps((newProps) => {
 
 ---
 
-## Child Window API (xprops)
+## Host Window API (xprops)
 
-In child windows, `window.xprops` provides access to props and control methods.
+In host windows, `window.xprops` provides access to props and control methods.
 
 ### TypeScript Setup
 
 ```typescript
-import { type ChildProps } from 'forgeframe';
+import { type HostProps } from 'forgeframe';
 
 // Define your props interface
 interface MyProps {
@@ -375,7 +375,7 @@ interface MyProps {
 // Type window.xprops
 declare global {
   interface Window {
-    xprops?: ChildProps<MyProps>;
+    xprops?: HostProps<MyProps>;
   }
 }
 
@@ -406,25 +406,25 @@ await xprops.hide();                           // Hide
 // Communication
 xprops.onProps((props) => { /* handle updates */ });
 xprops.onError(new Error('Something failed'));
-await xprops.export({ validate: () => true }); // Export to parent
+await xprops.export({ validate: () => true }); // Export to consumer
 
-// Parent access
-xprops.getParent();        // Parent window reference
-xprops.getParentDomain();  // Parent origin
-xprops.parent.props;       // Parent's props
-xprops.parent.export(data); // Export to parent component
+// Consumer access
+xprops.getConsumer();        // Consumer window reference
+xprops.getConsumerDomain();  // Consumer origin
+xprops.parent.props;         // Consumer's props (parent in window hierarchy)
+xprops.parent.export(data);  // Export to consumer component
 
 // Siblings
 const siblings = await xprops.getSiblings();
 ```
 
-### Exporting Data to Parent
+### Exporting Data to Consumer
 
-Child components can export methods/data for the parent to use.
+Host components can export methods/data for the consumer to use.
 
-**Child:**
+**Host:**
 ```typescript
-// Export methods to parent
+// Export methods to consumer
 window.xprops.export({
   validate: () => {
     const form = document.getElementById('form');
@@ -436,7 +436,7 @@ window.xprops.export({
 });
 ```
 
-**Parent:**
+**Consumer:**
 ```typescript
 const instance = MyComponent({ /* props */ });
 await instance.render('#container');
@@ -509,7 +509,7 @@ const ModalComponent = ForgeFrame.create({
 
 ### Prerender Template
 
-Customize the loading state shown while the child loads.
+Customize the loading state shown while the host loads.
 
 ```typescript
 const MyComponent = ForgeFrame.create({
@@ -630,7 +630,7 @@ const PopupComponent = ForgeFrame.create({
 
 ### Auto-Resize
 
-Automatically resize based on child content.
+Automatically resize based on host content.
 
 ```typescript
 const AutoResizeComponent = ForgeFrame.create({
@@ -653,8 +653,8 @@ const SecureComponent = ForgeFrame.create({
   tag: 'secure',
   url: 'https://secure.example.com/widget',
 
-  // Only allow these parent domains to embed
-  allowedParentDomains: [
+  // Only allow these consumer domains to embed
+  allowedConsumerDomains: [
     'https://myapp.com',
     'https://*.myapp.com',
     /^https:\/\/.*\.trusted\.com$/,
@@ -690,19 +690,19 @@ if (instance.isEligible()) {
 
 ### Nested Components
 
-Define child components that can be rendered from within the parent.
+Define nested components that can be rendered from within the host.
 
 ```typescript
-const ParentComponent = ForgeFrame.create({
-  tag: 'parent',
-  url: '/parent',
+const ContainerComponent = ForgeFrame.create({
+  tag: 'container',
+  url: '/container',
   children: () => ({
     CardField: CardFieldComponent,
     CVVField: CVVFieldComponent,
   }),
 });
 
-// In the parent's child page:
+// In the container's host page:
 const { children } = window.xprops;
 children.CardField({ onValid: () => {} }).render('#card-container');
 ```
@@ -720,8 +720,8 @@ ForgeFrame.create(options)        // Create a component
 ForgeFrame.destroy(instance)      // Destroy an instance
 ForgeFrame.destroyComponents(tag) // Destroy all instances of a tag
 ForgeFrame.destroyAll()           // Destroy all instances
-ForgeFrame.isChild()              // Check if in child context
-ForgeFrame.getXProps()            // Get xprops in child
+ForgeFrame.isHost()               // Check if in host context
+ForgeFrame.getXProps()            // Get xprops in host
 
 ForgeFrame.PROP_TYPE              // Prop type constants
 ForgeFrame.CONTEXT                // Context constants (IFRAME, POPUP)
@@ -735,7 +735,7 @@ ForgeFrame.VERSION                // Library version
 interface ComponentOptions<P> {
   // Required
   tag: string;                              // Unique identifier
-  url: string | ((props: P) => string);     // Child page URL
+  url: string | ((props: P) => string);     // Host page URL
 
   // Dimensions
   dimensions?: { width?: number | string; height?: number | string };
@@ -751,7 +751,7 @@ interface ComponentOptions<P> {
 
   // Security
   domain?: string;
-  allowedParentDomains?: Array<string | RegExp>;
+  allowedConsumerDomains?: Array<string | RegExp>;
 
   // Validation
   eligible?: (opts: { props: P }) => { eligible: boolean; reason?: string };
@@ -786,7 +786,7 @@ instance.isEligible()                        // Check eligibility
 instance.uid                                 // Unique ID
 instance.event                               // Event emitter
 instance.state                               // Mutable state
-instance.exports                             // Child exports
+instance.exports                             // Host exports
 ```
 
 ---
@@ -800,7 +800,7 @@ import ForgeFrame, {
   type ComponentOptions,
   type ForgeFrameComponent,
   type ForgeFrameComponentInstance,
-  type ChildProps,
+  type HostProps,
   type PropDefinition,
   type PropsDefinition,
   type TemplateContext,
@@ -809,10 +809,10 @@ import ForgeFrame, {
 } from 'forgeframe';
 ```
 
-### Typing Child xprops
+### Typing Host xprops
 
 ```typescript
-import { type ChildProps } from 'forgeframe';
+import { type HostProps } from 'forgeframe';
 
 interface MyProps {
   name: string;
@@ -821,7 +821,7 @@ interface MyProps {
 
 declare global {
   interface Window {
-    xprops?: ChildProps<MyProps>;
+    xprops?: HostProps<MyProps>;
   }
 }
 
