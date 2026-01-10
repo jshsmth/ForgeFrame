@@ -26,12 +26,12 @@ describe('Messenger', () => {
           messageListeners.delete(listener);
         }
       }),
-      location: { origin: 'https://parent.com' },
+      location: { origin: 'https://consumer.com' },
     } as unknown as Window;
 
     // Create messenger with trusted domains for testing
-    messenger = new Messenger('test-uid', mockWindow, 'https://parent.com', [
-      'https://child.com',
+    messenger = new Messenger('test-uid', mockWindow, 'https://consumer.com', [
+      'https://host.com',
       'https://target.com',
       'https://sender.com',
       'https://example.com',
@@ -42,7 +42,7 @@ describe('Messenger', () => {
     messenger.destroy();
   });
 
-  function dispatchMessage(data: unknown, source: Window = {} as Window, origin = 'https://child.com') {
+  function dispatchMessage(data: unknown, source: Window = {} as Window, origin = 'https://host.com') {
     const event = new MessageEvent('message', {
       data,
       source,
@@ -360,11 +360,11 @@ describe('Messenger', () => {
 
       const request = createRequestMessage('req-1', 'test', { data: 'value' }, {
         uid: 'trusted-uid',
-        domain: 'https://child.com',
+        domain: 'https://host.com',
       });
 
       // Dispatch from a trusted origin
-      dispatchMessage(serializeMessage(request), { postMessage: vi.fn() } as unknown as Window, 'https://child.com');
+      dispatchMessage(serializeMessage(request), { postMessage: vi.fn() } as unknown as Window, 'https://host.com');
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -396,7 +396,7 @@ describe('Messenger', () => {
 
     it('should support RegExp patterns for trusted domains', async () => {
       // Create new messenger with RegExp pattern
-      const regexMessenger = new Messenger('regex-uid', mockWindow, 'https://parent.com', /^https:\/\/.*\.trusted\.com$/);
+      const regexMessenger = new Messenger('regex-uid', mockWindow, 'https://consumer.com', /^https:\/\/.*\.trusted\.com$/);
 
       const handler = vi.fn().mockReturnValue({ ok: true });
       regexMessenger.on('test', handler);
