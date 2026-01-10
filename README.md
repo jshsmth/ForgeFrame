@@ -409,10 +409,10 @@ xprops.onError(new Error('Something failed'));
 await xprops.export({ validate: () => true }); // Export to consumer
 
 // Consumer access
-xprops.getConsumer();        // Consumer window reference
-xprops.getConsumerDomain();  // Consumer origin
-xprops.parent.props;         // Consumer's props (parent in window hierarchy)
-xprops.parent.export(data);  // Export to consumer component
+xprops.getConsumer();         // Consumer window reference
+xprops.getConsumerDomain();   // Consumer origin
+xprops.consumer.props;        // Consumer's props
+xprops.consumer.export(data); // Export to consumer component
 
 // Siblings
 const siblings = await xprops.getSiblings();

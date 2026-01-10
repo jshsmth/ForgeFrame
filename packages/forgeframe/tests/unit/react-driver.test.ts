@@ -86,7 +86,7 @@ const createMockComponent = <P extends Record<string, unknown>>(): ZoidComponent
 
   component.mockInstance = mockInstance;
   Object.defineProperty(component, 'name', { value: 'TestComponent', writable: true });
-  (component as unknown as { isChild: () => boolean }).isChild = () => false;
+  (component as unknown as { isHost: () => boolean }).isHost = () => false;
   (component as unknown as { instances: unknown[] }).instances = [];
 
   return component;
