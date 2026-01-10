@@ -5,12 +5,12 @@ import {
   matchDomain,
   isWindowClosed,
   getOpener,
-  getParent,
+  getConsumer,
   getTop,
   isIframe,
   isPopup,
   getAncestor,
-  getDistanceToParent,
+  getDistanceToConsumer,
   focusWindow,
   closeWindow,
   getFrames,
@@ -136,22 +136,22 @@ describe('getOpener', () => {
   });
 });
 
-describe('getParent', () => {
+describe('getConsumer', () => {
   it('should return null for top-level window', () => {
     const win = { parent: null } as unknown as Window;
-    expect(getParent(win)).toBeNull();
+    expect(getConsumer(win)).toBeNull();
   });
 
   it('should return null when parent is self', () => {
     const win = {} as Window;
     (win as { parent: Window }).parent = win;
-    expect(getParent(win)).toBeNull();
+    expect(getConsumer(win)).toBeNull();
   });
 
-  it('should return parent when in iframe', () => {
-    const parentWin = {} as Window;
-    const win = { parent: parentWin } as Window;
-    expect(getParent(win)).toBe(parentWin);
+  it('should return consumer when in iframe', () => {
+    const consumerWin = {} as Window;
+    const win = { parent: consumerWin } as Window;
+    expect(getConsumer(win)).toBe(consumerWin);
   });
 
   it('should return null on cross-origin error', () => {
@@ -161,7 +161,7 @@ describe('getParent', () => {
       },
     } as unknown as Window;
 
-    expect(getParent(win)).toBeNull();
+    expect(getConsumer(win)).toBeNull();
   });
 });
 
@@ -263,28 +263,28 @@ describe('getAncestor', () => {
   });
 });
 
-describe('getDistanceToParent', () => {
+describe('getDistanceToConsumer', () => {
   it('should return 0 for same window', () => {
     const win = {} as Window;
-    expect(getDistanceToParent(win, win)).toBe(0);
+    expect(getDistanceToConsumer(win, win)).toBe(0);
   });
 
-  it('should return 1 for direct parent', () => {
-    const parentWin = {} as Window;
-    (parentWin as { parent: Window }).parent = parentWin;
+  it('should return 1 for direct consumer', () => {
+    const consumerWin = {} as Window;
+    (consumerWin as { parent: Window }).parent = consumerWin;
 
-    const win = { parent: parentWin } as Window;
+    const win = { parent: consumerWin } as Window;
 
-    expect(getDistanceToParent(win, parentWin)).toBe(1);
+    expect(getDistanceToConsumer(win, consumerWin)).toBe(1);
   });
 
-  it('should return -1 if parent not found', () => {
+  it('should return -1 if consumer not found', () => {
     const win = {} as Window;
     (win as { parent: Window }).parent = win;
 
     const otherWin = {} as Window;
 
-    expect(getDistanceToParent(win, otherWin)).toBe(-1);
+    expect(getDistanceToConsumer(win, otherWin)).toBe(-1);
   });
 });
 

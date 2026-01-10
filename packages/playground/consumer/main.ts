@@ -1,5 +1,5 @@
 /**
- * ForgeFrame Playground - Parent
+ * ForgeFrame Playground - Consumer
  *
  * Interactive playground for testing ForgeFrame component configuration.
  * Edit JSON config, see generated code, and test the component live.
@@ -144,9 +144,9 @@ elements.jsonEditor.addEventListener('keydown', (e) => {
 function updateHeaderInfo() {
   const headerInfo = document.getElementById('header-info');
   if (headerInfo) {
-    const parentUrl = new URL(window.location.href).host;
-    const childUrl = new URL(currentConfig.url).host;
-    headerInfo.textContent = `${parentUrl} → ${childUrl}`;
+    const consumerUrl = new URL(window.location.href).host;
+    const hostUrl = new URL(currentConfig.url).host;
+    headerInfo.textContent = `${consumerUrl} → ${hostUrl}`;
   }
 }
 

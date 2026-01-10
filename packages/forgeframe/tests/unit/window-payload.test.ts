@@ -3,7 +3,7 @@ import {
   buildWindowName,
   parseWindowName,
   isForgeFrameWindow,
-  isChildOfComponent,
+  isHostOfComponent,
   createWindowPayload,
   updateWindowName,
   getInitialPayload,
@@ -18,7 +18,7 @@ describe('buildWindowName', () => {
       tag: 'test-component',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: { test: 'value' },
       exports: {},
     };
@@ -34,7 +34,7 @@ describe('buildWindowName', () => {
       tag: 'test-component',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: {},
       exports: {},
     };
@@ -54,7 +54,7 @@ describe('parseWindowName', () => {
       tag: 'my-component',
       version: VERSION,
       context: CONTEXT.POPUP,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: { value: 42 },
       exports: { close: true },
     };
@@ -86,7 +86,7 @@ describe('parseWindowName', () => {
       tag: 'test-component',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: { message: 'Hello World!' },
       exports: {},
     };
@@ -105,7 +105,7 @@ describe('isForgeFrameWindow', () => {
       tag: 'test-component',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: {},
       exports: {},
     };
@@ -138,14 +138,14 @@ describe('isForgeFrameWindow', () => {
   });
 });
 
-describe('isChildOfComponent', () => {
+describe('isHostOfComponent', () => {
   it('should return true for matching tag', () => {
     const payload: WindowNamePayload<Record<string, never>> = {
       uid: 'test-uid',
       tag: 'my-component',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: {},
       exports: {},
     };
@@ -154,7 +154,7 @@ describe('isChildOfComponent', () => {
       name: buildWindowName(payload),
     } as Window;
 
-    expect(isChildOfComponent('my-component', win)).toBe(true);
+    expect(isHostOfComponent('my-component', win)).toBe(true);
   });
 
   it('should return false for non-matching tag', () => {
@@ -163,7 +163,7 @@ describe('isChildOfComponent', () => {
       tag: 'other-component',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: {},
       exports: {},
     };
@@ -172,12 +172,12 @@ describe('isChildOfComponent', () => {
       name: buildWindowName(payload),
     } as Window;
 
-    expect(isChildOfComponent('my-component', win)).toBe(false);
+    expect(isHostOfComponent('my-component', win)).toBe(false);
   });
 
   it('should return false for non-ForgeFrame window', () => {
     const win = { name: 'regular-window' } as Window;
-    expect(isChildOfComponent('my-component', win)).toBe(false);
+    expect(isHostOfComponent('my-component', win)).toBe(false);
   });
 });
 
@@ -187,7 +187,7 @@ describe('createWindowPayload', () => {
       uid: 'test-uid',
       tag: 'test-tag',
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: { data: 'value' },
       exports: { close: true },
     });
@@ -196,7 +196,7 @@ describe('createWindowPayload', () => {
     expect(payload.uid).toBe('test-uid');
     expect(payload.tag).toBe('test-tag');
     expect(payload.context).toBe(CONTEXT.IFRAME);
-    expect(payload.parentDomain).toBe('https://parent.com');
+    expect(payload.consumerDomain).toBe('https://consumer.com');
     expect(payload.props.data).toBe('value');
     expect(payload.exports.close).toBe(true);
   });
@@ -206,7 +206,7 @@ describe('createWindowPayload', () => {
       uid: 'test-uid',
       tag: 'test-tag',
       context: CONTEXT.POPUP,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: {},
       exports: {},
       children: {
@@ -228,7 +228,7 @@ describe('updateWindowName', () => {
       tag: 'test-tag',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: {},
       exports: {},
     };
@@ -251,7 +251,7 @@ describe('updateWindowName', () => {
       tag: 'test-tag',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: {},
       exports: {},
     };
@@ -267,7 +267,7 @@ describe('getInitialPayload', () => {
       tag: 'test-tag',
       version: VERSION,
       context: CONTEXT.IFRAME,
-      parentDomain: 'https://parent.com',
+      consumerDomain: 'https://consumer.com',
       props: { value: 123 },
       exports: {},
     };

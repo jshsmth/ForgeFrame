@@ -202,9 +202,9 @@ export interface PropDefinition<T = unknown, P = Record<string, unknown>> {
   /** Function to compute the prop value */
   value?: (ctx: PropContext<P>) => T;
 
-  /** Whether to send this prop to the child window (default: true) */
-  sendToChild?: boolean;
-  /** Only send if parent and child are same domain */
+  /** Whether to send this prop to the host window (default: true) */
+  sendToHost?: boolean;
+  /** Only send if consumer and host are same domain */
   sameDomain?: boolean;
   /** List of trusted domains that can receive this prop */
   trustedDomains?: DomainMatcher[];
@@ -218,10 +218,10 @@ export interface PropDefinition<T = unknown, P = Record<string, unknown>> {
 
   /** Validate the prop value (throw to reject) */
   validate?: (opts: { value: T; props: P }) => void;
-  /** Transform the prop value in parent context */
+  /** Transform the prop value in consumer context */
   decorate?: (opts: { value: T; props: P }) => T;
-  /** Transform the prop value in child context */
-  childDecorate?: (opts: { value: T; props: P }) => T;
+  /** Transform the prop value in host context */
+  hostDecorate?: (opts: { value: T; props: P }) => T;
 
   /** Alternative name for the prop */
   alias?: string;
@@ -303,19 +303,19 @@ export type PrerenderTemplate<P = Record<string, unknown>> = (
 ) => HTMLElement | null;
 
 // ============================================================================
-// Children Component Types
+// Nested Component Types
 // ============================================================================
 
 /**
- * Function that returns child components for nested composition.
+ * Function that returns nested components for composition.
  *
- * @typeParam P - The props type for the parent component
+ * @typeParam P - The props type for the consumer component
  *
  * @remarks
- * Child components can be rendered within the parent component's iframe/popup.
+ * Nested components can be rendered within the host component's iframe/popup.
  *
- * @param props - Object containing the parent's props
- * @returns Map of child component names to ForgeFrameComponent instances
+ * @param props - Object containing the consumer's props
+ * @returns Map of nested component names to ForgeFrameComponent instances
  *
  * @public
  */
@@ -324,11 +324,11 @@ export type ChildrenDefinition<P = Record<string, unknown>> = (props: {
 }) => Record<string, ForgeFrameComponent>;
 
 /**
- * Serializable reference to a child component for cross-domain transfer.
+ * Serializable reference to a host component for cross-domain transfer.
  *
  * @internal
  */
-export interface ChildComponentRef {
+export interface HostComponentRef {
   /** Component tag name */
   tag: string;
   /** Component URL (or stringified function) */
@@ -409,9 +409,9 @@ export interface ComponentOptions<P = Record<string, unknown>> {
   domain?: DomainMatcher;
 
   /**
-   * Restrict which parent domains can embed this component.
+   * Restrict which consumer domains can embed this component.
    */
-  allowedParentDomains?: DomainMatcher;
+  allowedConsumerDomains?: DomainMatcher;
 
   /**
    * Custom container template function.
@@ -459,7 +459,7 @@ export interface ComponentOptions<P = Record<string, unknown>> {
   timeout?: number;
 
   /**
-   * Child components that can be rendered within this component.
+   * Nested components that can be rendered within this component.
    */
   children?: ChildrenDefinition<P>;
 }
@@ -648,7 +648,7 @@ export interface ForgeFrameComponentInstance<P = Record<string, unknown>, X = un
   state: Record<string, unknown>;
 
   /**
-   * Data exported from the child component via `xprops.export()`.
+   * Data exported from the host component via `xprops.export()`.
    */
   exports?: X;
 }
@@ -692,19 +692,19 @@ export interface ForgeFrameComponent<P = Record<string, unknown>, X = unknown> {
   (props?: P): ForgeFrameComponentInstance<P, X>;
 
   /**
-   * Check if current window is a child instance of this component.
+   * Check if current window is a host instance of this component.
    *
-   * @returns True if in child context
+   * @returns True if in host context
    */
-  isChild(): boolean;
+  isHost(): boolean;
 
   /**
-   * Get xprops if in child context.
+   * Get xprops if in host context.
    *
    * @remarks
-   * Only available when `isChild()` returns true.
+   * Only available when `isHost()` returns true.
    */
-  xprops?: ChildProps<P>;
+  xprops?: HostProps<P>;
 
   /**
    * Check if we can render to a target window.
@@ -721,27 +721,27 @@ export interface ForgeFrameComponent<P = Record<string, unknown>, X = unknown> {
 }
 
 // ============================================================================
-// Parent Namespace Types (for child access to parent)
+// Consumer Namespace Types (for host access to consumer)
 // ============================================================================
 
 /**
- * Parent namespace available in child via `xprops.parent`.
+ * Consumer namespace available in host via `xprops.consumer`.
  *
  * @typeParam P - The props type for the component
  *
  * @remarks
- * Provides bidirectional communication from child to parent.
+ * Provides bidirectional communication from host to consumer.
  *
  * @public
  */
-export interface ParentNamespace<P = Record<string, unknown>> {
+export interface ConsumerNamespace<P = Record<string, unknown>> {
   /**
-   * Access parent's props.
+   * Access consumer's props.
    */
   props: P;
 
   /**
-   * Export data/methods from parent context.
+   * Export data/methods from consumer context.
    *
    * @param data - Data to export
    * @returns Promise that resolves when export is complete
@@ -774,35 +774,35 @@ export interface SiblingInfo {
  */
 export interface GetSiblingsOptions {
   /**
-   * If true, get siblings from any parent window (not just same parent).
+   * If true, get siblings from any consumer window (not just same consumer).
    * @defaultValue false
    */
-  anyParent?: boolean;
+  anyConsumer?: boolean;
 }
 
 // ============================================================================
-// Child Component Types
+// Host Component Types
 // ============================================================================
 
 /**
- * Props object available in child window via `window.xprops`.
+ * Props object available in host window via `window.xprops`.
  *
  * @typeParam P - The props type for the component
  *
  * @remarks
- * The xprops object contains all props passed from the parent, plus
+ * The xprops object contains all props passed from the consumer, plus
  * built-in methods for controlling the component and communicating
- * with the parent.
+ * with the consumer.
  *
  * @example
  * ```typescript
- * // In child window
+ * // In host window
  * const { name, onSubmit, close, resize } = window.xprops;
  *
  * // Use passed props
  * console.log(name);
  *
- * // Call parent callbacks
+ * // Call consumer callbacks
  * await onSubmit({ success: true });
  *
  * // Control the frame
@@ -812,8 +812,8 @@ export interface GetSiblingsOptions {
  *
  * @public
  */
-export interface ChildProps<P = Record<string, unknown>> {
-  /** User-defined props passed from parent */
+export interface HostProps<P = Record<string, unknown>> {
+  /** User-defined props passed from consumer */
   [K: string]: unknown;
 
   /** Unique instance ID */
@@ -859,7 +859,7 @@ export interface ChildProps<P = Record<string, unknown>> {
   hide: () => Promise<void>;
 
   /**
-   * Subscribe to prop updates from parent.
+   * Subscribe to prop updates from consumer.
    *
    * @param handler - Function called when props change
    * @returns Object with cancel function to unsubscribe
@@ -867,7 +867,7 @@ export interface ChildProps<P = Record<string, unknown>> {
   onProps: (handler: (props: P) => void) => { cancel: () => void };
 
   /**
-   * Report an error to the parent.
+   * Report an error to the consumer.
    *
    * @param err - Error to report
    * @returns Promise that resolves when error is sent
@@ -875,21 +875,21 @@ export interface ChildProps<P = Record<string, unknown>> {
   onError: (err: Error) => Promise<void>;
 
   /**
-   * Get a reference to the parent window.
+   * Get a reference to the consumer window.
    *
-   * @returns Parent window object
+   * @returns Consumer window object
    */
-  getParent: () => Window;
+  getConsumer: () => Window;
 
   /**
-   * Get the parent window's domain.
+   * Get the consumer window's domain.
    *
-   * @returns Parent domain string
+   * @returns Consumer domain string
    */
-  getParentDomain: () => string;
+  getConsumerDomain: () => string;
 
   /**
-   * Export data/methods to the parent.
+   * Export data/methods to the consumer.
    *
    * @param exports - Data to export
    * @returns Promise that resolves when export is complete
@@ -897,9 +897,9 @@ export interface ChildProps<P = Record<string, unknown>> {
   export: <X>(exports: X) => Promise<void>;
 
   /**
-   * Parent namespace for bidirectional communication.
+   * Consumer namespace for bidirectional communication.
    */
-  parent: ParentNamespace<P>;
+  consumer: ConsumerNamespace<P>;
 
   /**
    * Get sibling component instances.
@@ -910,7 +910,7 @@ export interface ChildProps<P = Record<string, unknown>> {
   getSiblings: (options?: GetSiblingsOptions) => Promise<SiblingInfo[]>;
 
   /**
-   * Child components available for nested rendering.
+   * Nested components available for rendering.
    */
   children?: Record<string, ForgeFrameComponent>;
 }
@@ -920,14 +920,14 @@ export interface ChildProps<P = Record<string, unknown>> {
 // ============================================================================
 
 /**
- * Payload encoded in window.name for initial parent-to-child data transfer.
+ * Payload encoded in window.name for initial consumer-to-host data transfer.
  *
  * @typeParam _P - The props type (unused, for compatibility)
  *
  * @internal
  */
 export interface WindowNamePayload<_P = Record<string, unknown>> {
-  /** Parent component instance UID */
+  /** Consumer component instance UID */
   uid: string;
   /** Component tag name */
   tag: string;
@@ -935,14 +935,14 @@ export interface WindowNamePayload<_P = Record<string, unknown>> {
   version: string;
   /** Rendering context */
   context: ContextType;
-  /** Parent window domain */
-  parentDomain: string;
+  /** Consumer window domain */
+  consumerDomain: string;
   /** Serialized props */
   props: SerializedProps;
-  /** Parent method message names */
-  exports: ParentExports;
-  /** Child component references */
-  children?: Record<string, ChildComponentRef>;
+  /** Consumer method message names */
+  exports: ConsumerExports;
+  /** Nested component references */
+  children?: Record<string, HostComponentRef>;
 }
 
 /**
@@ -955,11 +955,11 @@ export interface SerializedProps {
 }
 
 /**
- * Map of parent methods to their message names.
+ * Map of consumer methods to their message names.
  *
  * @internal
  */
-export interface ParentExports {
+export interface ConsumerExports {
   /** Init message name */
   init: string;
   /** Close message name */

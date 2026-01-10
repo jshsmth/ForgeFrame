@@ -2,7 +2,7 @@
  * Prop type constants for defining component props.
  *
  * @remarks
- * These constants define the valid types for props passed between parent and child components.
+ * These constants define the valid types for props passed between consumer and host components.
  * Use these when defining prop definitions in your component configuration.
  *
  * @example
@@ -46,7 +46,7 @@ export type PropType = (typeof PROP_TYPE)[keyof typeof PROP_TYPE];
  *
  * @remarks
  * Components can be rendered as either iframes or popups.
- * The context determines how the child window is created and managed.
+ * The context determines how the host window is created and managed.
  *
  * @public
  */
@@ -116,7 +116,7 @@ export type EventType = (typeof EVENT)[keyof typeof EVENT];
  * Prop serialization strategies for cross-domain transfer.
  *
  * @remarks
- * When props are passed from parent to child across domains, they need to be
+ * When props are passed from consumer to host across domains, they need to be
  * serialized. Different strategies offer different trade-offs.
  *
  * @public
@@ -157,7 +157,7 @@ export const MESSAGE_TYPE = {
 export type MessageType = (typeof MESSAGE_TYPE)[keyof typeof MESSAGE_TYPE];
 
 /**
- * Message names for the parent-child communication protocol.
+ * Message names for the consumer-host communication protocol.
  *
  * @remarks
  * These are the internal message identifiers used by the postMessage protocol.
@@ -166,28 +166,28 @@ export type MessageType = (typeof MESSAGE_TYPE)[keyof typeof MESSAGE_TYPE];
  * @internal
  */
 export const MESSAGE_NAME = {
-  /** Child initialization complete */
+  /** Host initialization complete */
   INIT: 'forgeframe_init',
-  /** Props update from parent to child */
+  /** Props update from consumer to host */
   PROPS: 'forgeframe_props',
-  /** Close request from child */
+  /** Close request from host */
   CLOSE: 'forgeframe_close',
-  /** Resize request from child */
+  /** Resize request from host */
   RESIZE: 'forgeframe_resize',
-  /** Focus request from child */
+  /** Focus request from host */
   FOCUS: 'forgeframe_focus',
-  /** Show request from child */
+  /** Show request from host */
   SHOW: 'forgeframe_show',
-  /** Hide request from child */
+  /** Hide request from host */
   HIDE: 'forgeframe_hide',
-  /** Error report from child */
+  /** Error report from host */
   ERROR: 'forgeframe_error',
-  /** Data export from child to parent */
+  /** Data export from host to consumer */
   EXPORT: 'forgeframe_export',
   /** Cross-domain function call */
   CALL: 'forgeframe_call',
-  /** Parent export from child context */
-  PARENT_EXPORT: 'forgeframe_parent_export',
+  /** Consumer export from host context */
+  CONSUMER_EXPORT: 'forgeframe_consumer_export',
   /** Get sibling components request */
   GET_SIBLINGS: 'forgeframe_get_siblings',
 } as const;
@@ -199,7 +199,7 @@ export const MESSAGE_NAME = {
 export type MessageName = (typeof MESSAGE_NAME)[keyof typeof MESSAGE_NAME];
 
 /**
- * Window name prefix for identifying ForgeFrame child windows.
+ * Window name prefix for identifying ForgeFrame host windows.
  *
  * @remarks
  * This prefix is prepended to the base64-encoded payload in `window.name`

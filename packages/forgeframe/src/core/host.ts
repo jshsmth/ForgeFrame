@@ -1,15 +1,15 @@
 /**
  * @packageDocumentation
- * Child component implementation module.
+ * Host component implementation module.
  *
  * @remarks
- * This module contains the ChildComponent class which runs inside the iframe
- * or popup and handles communication with the parent window. It also provides
- * utilities for detecting child context and accessing xprops.
+ * This module contains the HostComponent class which runs inside the iframe
+ * or popup and handles communication with the consumer window. It also provides
+ * utilities for detecting host context and accessing xprops.
  */
 
 import type {
-  ChildProps,
+  HostProps,
   WindowNamePayload,
   Dimensions,
   PropsDefinition,
@@ -17,7 +17,7 @@ import type {
   SiblingInfo,
   GetSiblingsOptions,
   ForgeFrameComponent,
-  ChildComponentRef,
+  HostComponentRef,
 } from '../types';
 import { MESSAGE_NAME, EVENT } from '../constants';
 import { EventEmitter } from '../events/emitter';
@@ -25,7 +25,7 @@ import { Messenger } from '../communication/messenger';
 import { FunctionBridge } from '../communication/bridge';
 import {
   getDomain,
-  getParent,
+  getConsumer,
   getOpener,
   isIframe,
   isPopup,
@@ -38,18 +38,18 @@ import { deserializeProps } from '../props/serialize';
 import { create } from './component';
 
 /**
- * Child-side component implementation.
+ * Host-side component implementation.
  *
  * @remarks
  * This class runs inside the iframe or popup window and manages communication
- * with the parent component. It provides the xprops object with props and
+ * with the consumer component. It provides the xprops object with props and
  * control methods.
  *
- * @typeParam P - The props type passed from the parent
+ * @typeParam P - The props type passed from the consumer
  *
  * @example
  * ```typescript
- * // In child window
+ * // In host window
  * const { email, onLogin, close } = window.xprops;
  * console.log('Email:', email);
  * onLogin({ id: 1, name: 'John' });
@@ -58,9 +58,9 @@ import { create } from './component';
  *
  * @public
  */
-export class ChildComponent<P extends Record<string, unknown>> {
+export class HostComponent<P extends Record<string, unknown>> {
   /** The xprops object containing props and control methods. */
-  public xprops: ChildProps<P>;
+  public xprops: HostProps<P>;
 
   /** Event emitter for lifecycle events. */
   public event: EventEmitter;
@@ -72,10 +72,10 @@ export class ChildComponent<P extends Record<string, unknown>> {
   private tag: string;
 
   /** @internal */
-  private parentWindow: Window;
+  private consumerWindow: Window;
 
   /** @internal */
-  private parentDomain: string;
+  private consumerDomain: string;
 
   /** @internal */
   private messenger: Messenger;
@@ -87,13 +87,13 @@ export class ChildComponent<P extends Record<string, unknown>> {
   private propsHandlers: Set<(props: P) => void> = new Set();
 
   /** @internal */
-  private parentProps!: P;
+  private consumerProps!: P;
 
   /** @internal */
   private initError: Error | null = null;
 
   /**
-   * Creates a new ChildComponent instance.
+   * Creates a new HostComponent instance.
    *
    * @param payload - The payload parsed from window.name
    * @param propDefinitions - Optional prop definitions for deserialization
@@ -104,21 +104,21 @@ export class ChildComponent<P extends Record<string, unknown>> {
   ) {
     this.uid = payload.uid;
     this.tag = payload.tag;
-    this.parentDomain = payload.parentDomain;
+    this.consumerDomain = payload.consumerDomain;
     this.event = new EventEmitter();
 
-    // Create messenger with parent domain as trusted origin for security
-    this.messenger = new Messenger(this.uid, window, getDomain(), this.parentDomain);
+    // Create messenger with consumer domain as trusted origin for security
+    this.messenger = new Messenger(this.uid, window, getDomain(), this.consumerDomain);
 
     // IMPORTANT: Set up message handlers immediately after creating messenger
-    // to prevent race conditions where parent messages arrive before handlers exist
+    // to prevent race conditions where consumer messages arrive before handlers exist
     this.setupMessageHandlers();
 
-    // Now safe to resolve parent and build xprops
-    this.parentWindow = this.resolveParentWindow();
+    // Now safe to resolve consumer and build xprops
+    this.consumerWindow = this.resolveConsumerWindow();
     this.bridge = new FunctionBridge(this.messenger);
     this.xprops = this.buildXProps(payload);
-    (window as unknown as { xprops: ChildProps<P> }).xprops = this.xprops;
+    (window as unknown as { xprops: HostProps<P> }).xprops = this.xprops;
 
     this.sendInit();
   }
@@ -128,18 +128,18 @@ export class ChildComponent<P extends Record<string, unknown>> {
    *
    * @returns The xprops object with props and control methods
    */
-  getProps(): ChildProps<P> {
+  getProps(): HostProps<P> {
     return this.xprops;
   }
 
   /**
-   * Resolves the parent window reference (iframe parent or popup opener).
+   * Resolves the consumer window reference (iframe parent or popup opener).
    * @internal
    */
-  private resolveParentWindow(): Window {
+  private resolveConsumerWindow(): Window {
     if (isIframe()) {
-      const parent = getParent();
-      if (parent) return parent;
+      const consumer = getConsumer();
+      if (consumer) return consumer;
     }
 
     if (isPopup()) {
@@ -147,24 +147,24 @@ export class ChildComponent<P extends Record<string, unknown>> {
       if (opener) return opener;
     }
 
-    throw new Error('Could not resolve parent window');
+    throw new Error('Could not resolve consumer window');
   }
 
   /**
    * Builds the xprops object with deserialized props and control methods.
    * @internal
    */
-  private buildXProps(payload: WindowNamePayload<P>): ChildProps<P> {
+  private buildXProps(payload: WindowNamePayload<P>): HostProps<P> {
     const deserializedProps = deserializeProps(
       payload.props,
       this.propDefinitions,
       this.messenger,
       this.bridge,
-      this.parentWindow,
-      this.parentDomain
+      this.consumerWindow,
+      this.consumerDomain
     );
 
-    this.parentProps = deserializedProps;
+    this.consumerProps = deserializedProps;
 
     return {
       ...deserializedProps,
@@ -177,27 +177,27 @@ export class ChildComponent<P extends Record<string, unknown>> {
       hide: () => this.hide(),
       onProps: (handler: (props: P) => void) => this.onProps(handler),
       onError: (err: Error) => this.onError(err),
-      getParent: () => this.parentWindow,
-      getParentDomain: () => this.parentDomain,
+      getConsumer: () => this.consumerWindow,
+      getConsumerDomain: () => this.consumerDomain,
       export: <T>(exports: T) => this.exportData(exports),
-      parent: {
-        props: this.parentProps,
-        export: <T>(data: T) => this.parentExport(data),
+      consumer: {
+        props: this.consumerProps,
+        export: <T>(data: T) => this.consumerExport(data),
       },
       getSiblings: (options?: GetSiblingsOptions) => this.getSiblings(options),
-      children: this.buildChildComponents(payload.children),
+      children: this.buildNestedComponents(payload.children),
     };
   }
 
   /**
-   * Sends initialization message to the parent.
+   * Sends initialization message to the consumer.
    * @internal
    */
   private async sendInit(): Promise<void> {
     try {
       await this.messenger.send(
-        this.parentWindow,
-        this.parentDomain,
+        this.consumerWindow,
+        this.consumerDomain,
         MESSAGE_NAME.INIT,
         { uid: this.uid, tag: this.tag }
       );
@@ -207,7 +207,7 @@ export class ChildComponent<P extends Record<string, unknown>> {
 
       this.event.emit(EVENT.ERROR, {
         type: 'init_failed',
-        message: `Failed to initialize child component: ${error.message}`,
+        message: `Failed to initialize host component: ${error.message}`,
         error,
       });
 
@@ -225,73 +225,73 @@ export class ChildComponent<P extends Record<string, unknown>> {
   }
 
   /**
-   * Requests the parent to close this component.
+   * Requests the consumer to close this component.
    * @internal
    */
   private async close(): Promise<void> {
     await this.messenger.send(
-      this.parentWindow,
-      this.parentDomain,
+      this.consumerWindow,
+      this.consumerDomain,
       MESSAGE_NAME.CLOSE,
       {}
     );
   }
 
   /**
-   * Focuses this window and notifies the parent.
+   * Focuses this window and notifies the consumer.
    * @internal
    */
   private async focus(): Promise<void> {
     window.focus();
     await this.messenger.send(
-      this.parentWindow,
-      this.parentDomain,
+      this.consumerWindow,
+      this.consumerDomain,
       MESSAGE_NAME.FOCUS,
       {}
     );
   }
 
   /**
-   * Requests the parent to resize this component.
+   * Requests the consumer to resize this component.
    * @internal
    */
   private async resize(dimensions: Dimensions): Promise<void> {
     await this.messenger.send(
-      this.parentWindow,
-      this.parentDomain,
+      this.consumerWindow,
+      this.consumerDomain,
       MESSAGE_NAME.RESIZE,
       dimensions
     );
   }
 
   /**
-   * Requests the parent to show this component.
+   * Requests the consumer to show this component.
    * @internal
    */
   private async show(): Promise<void> {
     await this.messenger.send(
-      this.parentWindow,
-      this.parentDomain,
+      this.consumerWindow,
+      this.consumerDomain,
       MESSAGE_NAME.SHOW,
       {}
     );
   }
 
   /**
-   * Requests the parent to hide this component.
+   * Requests the consumer to hide this component.
    * @internal
    */
   private async hide(): Promise<void> {
     await this.messenger.send(
-      this.parentWindow,
-      this.parentDomain,
+      this.consumerWindow,
+      this.consumerDomain,
       MESSAGE_NAME.HIDE,
       {}
     );
   }
 
   /**
-   * Subscribes to prop updates from the parent.
+   * Subscribes to prop updates from the consumer.
    * @internal
    */
   private onProps(handler: (props: P) => void): { cancel: () => void } {
@@ -302,13 +302,13 @@ export class ChildComponent<P extends Record<string, unknown>> {
   }
 
   /**
-   * Reports an error to the parent.
+   * Reports an error to the consumer.
    * @internal
    */
   private async onError(err: Error): Promise<void> {
     await this.messenger.send(
-      this.parentWindow,
-      this.parentDomain,
+      this.consumerWindow,
+      this.consumerDomain,
       MESSAGE_NAME.ERROR,
       {
         message: err.message,
@@ -318,27 +318,27 @@ export class ChildComponent<P extends Record<string, unknown>> {
   }
 
   /**
-   * Exports data or methods to the parent.
+   * Exports data or methods to the consumer.
    * @internal
    */
   private async exportData<T>(exports: T): Promise<void> {
     await this.messenger.send(
-      this.parentWindow,
-      this.parentDomain,
+      this.consumerWindow,
+      this.consumerDomain,
       MESSAGE_NAME.EXPORT,
       exports
     );
   }
 
   /**
-   * Exports data to the parent for bidirectional communication.
+   * Exports data to the consumer for bidirectional communication.
    * @internal
    */
-  private async parentExport<T>(data: T): Promise<void> {
+  private async consumerExport<T>(data: T): Promise<void> {
     await this.messenger.send(
-      this.parentWindow,
-      this.parentDomain,
-      MESSAGE_NAME.PARENT_EXPORT,
+      this.consumerWindow,
+      this.consumerDomain,
+      MESSAGE_NAME.CONSUMER_EXPORT,
       data
     );
   }
@@ -352,8 +352,8 @@ export class ChildComponent<P extends Record<string, unknown>> {
       { uid: string; tag: string; options?: GetSiblingsOptions },
       SiblingInfo[]
     >(
-      this.parentWindow,
-      this.parentDomain,
+      this.consumerWindow,
+      this.consumerDomain,
       MESSAGE_NAME.GET_SIBLINGS,
       { uid: this.uid, tag: this.tag, options }
     );
@@ -361,19 +361,19 @@ export class ChildComponent<P extends Record<string, unknown>> {
   }
 
   /**
-   * Builds child component factories from refs passed by the parent.
+   * Builds nested component factories from refs passed by the consumer.
    * @internal
    */
-  private buildChildComponents(
-    childrenRefs?: Record<string, ChildComponentRef>
+  private buildNestedComponents(
+    nestedRefs?: Record<string, HostComponentRef>
   ): Record<string, ForgeFrameComponent> | undefined {
-    if (!childrenRefs) return undefined;
+    if (!nestedRefs) return undefined;
 
-    const children: Record<string, ForgeFrameComponent> = {};
+    const components: Record<string, ForgeFrameComponent> = {};
 
-    for (const [name, ref] of Object.entries(childrenRefs)) {
+    for (const [name, ref] of Object.entries(nestedRefs)) {
       try {
-        children[name] = create({
+        components[name] = create({
           tag: ref.tag,
           url: ref.url,
           props: ref.props,
@@ -381,15 +381,15 @@ export class ChildComponent<P extends Record<string, unknown>> {
           defaultContext: ref.defaultContext,
         });
       } catch (err) {
-        console.warn(`Failed to create child component "${name}":`, err);
+        console.warn(`Failed to create nested component "${name}":`, err);
       }
     }
 
-    return Object.keys(children).length > 0 ? children : undefined;
+    return Object.keys(components).length > 0 ? components : undefined;
   }
 
   /**
-   * Sets up message handlers for parent communication.
+   * Sets up message handlers for consumer communication.
    * @internal
    */
   private setupMessageHandlers(): void {
@@ -400,8 +400,8 @@ export class ChildComponent<P extends Record<string, unknown>> {
           this.propDefinitions,
           this.messenger,
           this.bridge,
-          this.parentWindow,
-          this.parentDomain
+          this.consumerWindow,
+          this.consumerDomain
         );
 
         Object.assign(this.xprops, newProps);
@@ -427,7 +427,7 @@ export class ChildComponent<P extends Record<string, unknown>> {
   }
 
   /**
-   * Destroys the child component and cleans up resources.
+   * Destroys the host component and cleans up resources.
    */
   destroy(): void {
     this.messenger.destroy();
@@ -438,39 +438,39 @@ export class ChildComponent<P extends Record<string, unknown>> {
 }
 
 /**
- * Global child instance (singleton per window).
+ * Global host instance (singleton per window).
  * @internal
  */
-let childInstance: ChildComponent<Record<string, unknown>> | null = null;
+let hostInstance: HostComponent<Record<string, unknown>> | null = null;
 
 /**
- * Initializes the child component if running in a ForgeFrame window.
+ * Initializes the host component if running in a ForgeFrame window.
  *
  * @remarks
  * This function detects if the current window was created by ForgeFrame
- * and sets up the child component with xprops. Returns null if not in
- * a ForgeFrame child context.
+ * and sets up the host component with xprops. Returns null if not in
+ * a ForgeFrame host context.
  *
- * @typeParam P - The props type passed from the parent
+ * @typeParam P - The props type passed from the consumer
  * @param propDefinitions - Optional prop definitions for deserialization
- * @returns The child component instance or null if not in a child window
+ * @returns The host component instance or null if not in a host window
  *
  * @example
  * ```typescript
- * const child = initChild();
- * if (child) {
- *   console.log('Running in ForgeFrame child context');
- *   console.log('Props:', child.xprops);
+ * const host = initHost();
+ * if (host) {
+ *   console.log('Running in ForgeFrame host context');
+ *   console.log('Props:', host.xprops);
  * }
  * ```
  *
  * @public
  */
-export function initChild<P extends Record<string, unknown>>(
+export function initHost<P extends Record<string, unknown>>(
   propDefinitions?: PropsDefinition<P>
-): ChildComponent<P> | null {
-  if (childInstance) {
-    return childInstance as ChildComponent<P>;
+): HostComponent<P> | null {
+  if (hostInstance) {
+    return hostInstance as HostComponent<P>;
   }
 
   if (!isForgeFrameWindow()) {
@@ -483,41 +483,41 @@ export function initChild<P extends Record<string, unknown>>(
     return null;
   }
 
-  childInstance = new ChildComponent(
+  hostInstance = new HostComponent(
     payload,
     propDefinitions
-  ) as ChildComponent<Record<string, unknown>>;
+  ) as HostComponent<Record<string, unknown>>;
 
-  return childInstance as ChildComponent<P>;
+  return hostInstance as HostComponent<P>;
 }
 
 /**
- * Gets the current child component instance.
+ * Gets the current host component instance.
  *
- * @typeParam P - The props type passed from the parent
- * @returns The child component instance or null if not initialized
+ * @typeParam P - The props type passed from the consumer
+ * @returns The host component instance or null if not initialized
  *
  * @public
  */
-export function getChild<P extends Record<string, unknown>>(): ChildComponent<P> | null {
-  return childInstance as ChildComponent<P> | null;
+export function getHost<P extends Record<string, unknown>>(): HostComponent<P> | null {
+  return hostInstance as HostComponent<P> | null;
 }
 
 /**
- * Checks if the current window is a ForgeFrame child context.
+ * Checks if the current window is a ForgeFrame host context.
  *
  * @returns True if running inside a ForgeFrame iframe or popup
  *
  * @example
  * ```typescript
- * if (isChild()) {
- *   console.log('Running in ForgeFrame child');
+ * if (isHost()) {
+ *   console.log('Running in ForgeFrame host');
  * }
  * ```
  *
  * @public
  */
-export function isChild(): boolean {
+export function isHost(): boolean {
   return isForgeFrameWindow();
 }
 
@@ -527,8 +527,8 @@ export function isChild(): boolean {
  * @remarks
  * This is a convenience function to access `window.xprops`.
  *
- * @typeParam P - The props type passed from the parent
- * @returns The xprops object or undefined if not in a child context
+ * @typeParam P - The props type passed from the consumer
+ * @returns The xprops object or undefined if not in a host context
  *
  * @example
  * ```typescript
@@ -540,6 +540,6 @@ export function isChild(): boolean {
  *
  * @public
  */
-export function getXProps<P extends Record<string, unknown>>(): ChildProps<P> | undefined {
-  return (window as unknown as { xprops?: ChildProps<P> }).xprops;
+export function getXProps<P extends Record<string, unknown>>(): HostProps<P> | undefined {
+  return (window as unknown as { xprops?: HostProps<P> }).xprops;
 }

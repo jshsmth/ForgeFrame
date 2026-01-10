@@ -4,12 +4,12 @@ import mkcert from 'vite-plugin-mkcert';
 
 export default defineConfig(({ command }) => ({
   plugins: command === 'serve' ? [mkcert()] : [],
-  root: resolve(__dirname, 'child'),
+  root: resolve(__dirname, 'host'),
   server: {
     port: 5174,
   },
   build: {
-    outDir: resolve(__dirname, 'dist/child'),
+    outDir: resolve(__dirname, 'dist/host'),
     emptyOutDir: true,
   },
 }));

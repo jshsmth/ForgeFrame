@@ -12,11 +12,11 @@ import type {
   ComponentOptions,
   ForgeFrameComponent,
   ForgeFrameComponentInstance,
-  ChildProps,
+  HostProps,
 } from '../types';
-import { ParentComponent } from './parent';
-import { initChild } from './child';
-import { isChildOfComponent } from '../window/name-payload';
+import { ConsumerComponent } from './consumer';
+import { initHost } from './host';
+import { isHostOfComponent } from '../window/name-payload';
 import { isSameDomain } from '../window/helpers';
 
 /**
@@ -101,11 +101,11 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
 
   const instances: ForgeFrameComponentInstance<P, X>[] = [];
 
-  let childXProps: ChildProps<P> | undefined;
-  if (isChildOfComponent(options.tag)) {
-    const child = initChild<P>(options.props);
-    if (child) {
-      childXProps = child.xprops;
+  let hostXProps: HostProps<P> | undefined;
+  if (isHostOfComponent(options.tag)) {
+    const host = initHost<P>(options.props);
+    if (host) {
+      hostXProps = host.xprops;
     }
   }
 
@@ -115,7 +115,7 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
    * @returns A new component instance
    */
   const Component = function (props: Partial<P> = {} as Partial<P>): ForgeFrameComponentInstance<P, X> {
-    const instance = new ParentComponent<P, X>(options, props);
+    const instance = new ConsumerComponent<P, X>(options, props);
 
     instances.push(instance);
 
@@ -131,11 +131,11 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
 
   Component.instances = instances;
 
-  Component.isChild = (): boolean => {
-    return isChildOfComponent(options.tag);
+  Component.isHost = (): boolean => {
+    return isHostOfComponent(options.tag);
   };
 
-  Component.xprops = childXProps;
+  Component.xprops = hostXProps;
 
   Component.canRenderTo = async (win: Window): Promise<boolean> => {
     try {
@@ -281,4 +281,4 @@ export function clearComponents(): void {
   componentRegistry.clear();
 }
 
-export { isChild, getXProps } from './child';
+export { isHost, getXProps } from './host';

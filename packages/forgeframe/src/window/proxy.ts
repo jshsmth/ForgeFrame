@@ -1,5 +1,5 @@
 import type { WindowRef } from '../types';
-import { getParent, getOpener, getAncestor, isWindowClosed } from './helpers';
+import { getConsumer, getOpener, getAncestor, isWindowClosed } from './helpers';
 
 /**
  * Maximum number of windows to keep in the registry.
@@ -161,14 +161,14 @@ export function createWindowRef(
     return { type: 'opener' };
   }
 
-  let parent = getParent(sourceWin);
+  let consumer = getConsumer(sourceWin);
   let distance = 1;
 
-  while (parent) {
-    if (parent === targetWin) {
+  while (consumer) {
+    if (consumer === targetWin) {
       return { type: 'parent', distance };
     }
-    parent = getParent(parent);
+    consumer = getConsumer(consumer);
     distance++;
 
     if (distance > 100) break;
