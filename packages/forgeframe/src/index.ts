@@ -52,6 +52,9 @@ import {
 // Errors
 import { PopupOpenError } from './render/popup';
 
+// Schema utilities
+import { isStandardSchema } from './props/schema';
+
 // Auto-initialize host if in a ForgeFrame window.
 // This makes window.xprops available automatically in host contexts.
 initHost();
@@ -166,6 +169,24 @@ export const ForgeFrame = {
    * Current library version.
    */
   VERSION,
+
+  /**
+   * Check if a value is a Standard Schema (Zod, Valibot, ArkType, etc.)
+   *
+   * @param value - The value to check
+   * @returns True if the value implements StandardSchemaV1
+   *
+   * @example
+   * ```typescript
+   * import { z } from 'zod';
+   *
+   * const schema = z.string();
+   * if (ForgeFrame.isStandardSchema(schema)) {
+   *   // schema is StandardSchemaV1
+   * }
+   * ```
+   */
+  isStandardSchema,
 } as const;
 
 /**
@@ -194,6 +215,9 @@ export {
 
 export { PopupOpenError } from './render/popup';
 
+// Schema utilities
+export { isStandardSchema } from './props/schema';
+
 // Type exports
 export type {
   // Component types
@@ -206,6 +230,11 @@ export type {
   PropDefinition,
   PropsDefinition,
   PropContext,
+
+  // Standard Schema types
+  StandardSchemaV1,
+  InferSchemaOutput,
+  SchemaPropDefinition,
 
   // Template types
   TemplateContext,
