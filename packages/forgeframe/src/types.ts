@@ -14,6 +14,7 @@ import type {
   SerializationType,
   EventType,
 } from './constants';
+import type { StandardSchemaV1, InferOutput } from './props/schema';
 
 // ============================================================================
 // Utility Types
@@ -193,8 +194,37 @@ export interface PropContext<P> {
  * @public
  */
 export interface PropDefinition<T = unknown, P = Record<string, unknown>> {
-  /** The prop type (STRING, NUMBER, FUNCTION, etc.) */
-  type: PropType;
+  /**
+   * Standard Schema validator (Zod, Valibot, ArkType, etc.)
+   *
+   * @remarks
+   * When provided, the schema handles both type checking and validation.
+   * The `type` property becomes optional when using a schema.
+   *
+   * @example
+   * ```typescript
+   * import { z } from 'zod';
+   *
+   * const props = {
+   *   email: {
+   *     schema: z.string().email(),
+   *     required: true,
+   *   },
+   * };
+   * ```
+   *
+   * @see https://standardschema.dev/
+   */
+  schema?: StandardSchemaV1<unknown, T>;
+
+  /**
+   * The prop type (STRING, NUMBER, FUNCTION, etc.)
+   *
+   * @remarks
+   * Optional when `schema` is provided. Required otherwise.
+   */
+  type?: PropType;
+
   /** Whether the prop is required */
   required?: boolean;
   /** Default value or function returning default value */
@@ -237,6 +267,50 @@ export interface PropDefinition<T = unknown, P = Record<string, unknown>> {
 export type PropsDefinition<P> = {
   [K in keyof P]?: PropDefinition<P[K], P>;
 };
+
+/**
+ * Infers the output type from a Standard Schema.
+ *
+ * @typeParam S - The Standard Schema type
+ *
+ * @example
+ * ```typescript
+ * import { z } from 'zod';
+ * const schema = z.object({ name: z.string() });
+ * type User = InferSchemaOutput<typeof schema>; // { name: string }
+ * ```
+ *
+ * @public
+ */
+export type InferSchemaOutput<S extends StandardSchemaV1> = InferOutput<S>;
+
+/**
+ * Helper type for creating schema-based prop definitions with full type inference.
+ *
+ * @typeParam S - The Standard Schema type
+ * @typeParam P - The props type for the component
+ *
+ * @example
+ * ```typescript
+ * import { z } from 'zod';
+ *
+ * const userSchema = z.object({ name: z.string(), age: z.number() });
+ *
+ * type UserPropDef = SchemaPropDefinition<typeof userSchema>;
+ * // Equivalent to: PropDefinition<{ name: string; age: number }> with schema
+ * ```
+ *
+ * @public
+ */
+export type SchemaPropDefinition<
+  S extends StandardSchemaV1,
+  P = Record<string, unknown>,
+> = Omit<PropDefinition<InferOutput<S>, P>, 'type'> & {
+  schema: S;
+};
+
+// Re-export StandardSchemaV1 for convenience
+export type { StandardSchemaV1 } from './props/schema';
 
 // ============================================================================
 // Template Types

@@ -16,6 +16,7 @@ import type {
 import { PROP_TYPE } from '../constants';
 import { BUILTIN_PROP_DEFINITIONS } from './definitions';
 import { matchDomain } from '../window/helpers';
+import { isStandardSchema, validateWithSchema } from './schema';
 
 /**
  * Merges user props with defaults and computes derived values.
@@ -92,7 +93,7 @@ export function validateProps<P extends Record<string, unknown>>(
 
   for (const [key, def] of Object.entries(allDefs)) {
     const definition = def as PropDefinition<unknown, P>;
-    const value = props[key as keyof P];
+    let value: unknown = props[key as keyof P];
 
     if (definition.required && value === undefined) {
       throw new Error(`Prop "${key}" is required but was not provided`);
@@ -100,7 +101,10 @@ export function validateProps<P extends Record<string, unknown>>(
 
     if (value === undefined) continue;
 
-    if (!validateType(value, definition.type)) {
+    if (definition.schema && isStandardSchema(definition.schema)) {
+      value = validateWithSchema(definition.schema, value, key);
+      (props as Record<string, unknown>)[key] = value;
+    } else if (definition.type && !validateType(value, definition.type)) {
       throw new Error(
         `Prop "${key}" expected type "${definition.type}" but got "${typeof value}"`
       );

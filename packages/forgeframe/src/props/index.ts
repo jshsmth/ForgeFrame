@@ -25,3 +25,18 @@ export {
   deserializeProps,
   cloneProps,
 } from './serialize';
+
+export {
+  isStandardSchema,
+  validateWithSchema,
+  type StandardSchemaV1,
+  type StandardSchemaV1Props,
+  type StandardSchemaV1Result,
+  type StandardSchemaV1SuccessResult,
+  type StandardSchemaV1FailureResult,
+  type StandardSchemaV1Issue,
+  type StandardSchemaV1PathSegment,
+  type StandardSchemaV1Types,
+  type InferInput,
+  type InferOutput,
+} from './schema';
