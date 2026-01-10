@@ -265,9 +265,9 @@ export function createWindowPayload<P>(options: {
  *
  * @example
  * ```typescript
- * // Update child window with new props
+ * // Update host window with new props
  * const updatedPayload = { ...existingPayload, props: { newValue: 42 } };
- * updateWindowName(childWindow, updatedPayload);
+ * updateWindowName(hostWindow, updatedPayload);
  * ```
  *
  * @public

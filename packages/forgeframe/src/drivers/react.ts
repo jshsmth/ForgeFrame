@@ -161,7 +161,7 @@ export interface ReactComponentType<P> {
  * Creates a React component wrapper for a ForgeFrame cross-domain component.
  *
  * @typeParam P - The props type defined in the ForgeFrame component
- * @typeParam X - The export type for data shared from the child component
+ * @typeParam X - The export type for data shared from the host component
  *
  * @param Component - The ForgeFrame component to wrap
  * @param options - Configuration options including the React instance
@@ -347,7 +347,7 @@ export function withReactDriver(React: ReactLike) {
    * Driver factory function that wraps a ForgeFrame component.
    *
    * @typeParam P - The props type defined in the ForgeFrame component
-   * @typeParam X - The export type for data shared from the child component
+   * @typeParam X - The export type for data shared from the host component
    *
    * @param Component - The ForgeFrame component to wrap
    * @returns A React component that renders the ForgeFrame component

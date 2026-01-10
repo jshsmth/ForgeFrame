@@ -194,9 +194,9 @@ export function createWindowRef(
  *
  * @example
  * ```typescript
- * // Resolve a parent reference
+ * // Resolve a consumer reference
  * const ref: WindowRef = { type: 'parent', distance: 1 };
- * const parentWindow = resolveWindowRef(ref);
+ * const consumerWindow = resolveWindowRef(ref);
  *
  * // Resolve a global reference
  * const globalRef: WindowRef = { type: 'global', uid: 'my-popup-123' };

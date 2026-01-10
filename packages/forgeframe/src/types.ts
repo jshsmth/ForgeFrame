@@ -60,8 +60,8 @@ export interface Dimensions {
  * Configuration for automatic component resizing.
  *
  * @remarks
- * When enabled, the parent will automatically resize the iframe
- * based on the child content dimensions.
+ * When enabled, the consumer will automatically resize the iframe
+ * based on the host content dimensions.
  *
  * @public
  */
@@ -176,7 +176,7 @@ export interface PropContext<P> {
  *
  * @remarks
  * Prop definitions control how individual props are validated, serialized,
- * and passed between parent and child components.
+ * and passed between consumer and host components.
  *
  * @example
  * ```typescript
@@ -378,7 +378,7 @@ export interface ComponentOptions<P = Record<string, unknown>> {
   tag: string;
 
   /**
-   * URL of the child component page, or function that returns URL based on props.
+   * URL of the host component page, or function that returns URL based on props.
    */
   url: string | ((props: P) => string);
 
@@ -404,7 +404,7 @@ export interface ComponentOptions<P = Record<string, unknown>> {
   defaultContext?: ContextType;
 
   /**
-   * Allowed child domains for security validation.
+   * Allowed host domains for security validation.
    */
   domain?: DomainMatcher;
 
@@ -453,7 +453,7 @@ export interface ComponentOptions<P = Record<string, unknown>> {
   style?: IframeStyles | ((props: P) => IframeStyles);
 
   /**
-   * Timeout in milliseconds for child initialization.
+   * Timeout in milliseconds for host initialization.
    * @defaultValue 10000
    */
   timeout?: number;
@@ -531,7 +531,7 @@ export interface EventEmitterInterface {
  * Instance of a rendered component.
  *
  * @typeParam P - The props type for the component
- * @typeParam X - The type of exports from the child
+ * @typeParam X - The type of exports from the host
  *
  * @remarks
  * Component instances are created by calling the component factory function
@@ -661,11 +661,11 @@ export interface ForgeFrameComponentInstance<P = Record<string, unknown>, X = un
  * Component factory function and static properties.
  *
  * @typeParam P - The props type for the component
- * @typeParam X - The type of exports from the child
+ * @typeParam X - The type of exports from the host
  *
  * @remarks
  * This is the return type of `ForgeFrame.create()`. It can be called as a
- * function to create instances, and has static properties for child detection.
+ * function to create instances, and has static properties for host detection.
  *
  * @example
  * ```typescript
@@ -674,8 +674,8 @@ export interface ForgeFrameComponentInstance<P = Record<string, unknown>, X = un
  * // Create an instance
  * const instance = MyComponent({ name: 'World' });
  *
- * // Check if we're in a child context
- * if (MyComponent.isChild()) {
+ * // Check if we're in a host context
+ * if (MyComponent.isHost()) {
  *   const props = MyComponent.xprops;
  * }
  * ```

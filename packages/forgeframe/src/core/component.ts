@@ -73,7 +73,7 @@ function validateComponentOptions<P>(options: ComponentOptions<P>): void {
  * Equivalent to zoid.create() for migration purposes.
  *
  * @typeParam P - The props type for the component
- * @typeParam X - The exports type that the child can expose
+ * @typeParam X - The exports type that the host can expose
  * @param options - Component configuration options
  * @returns A component factory function
  *
@@ -165,7 +165,7 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
  * Retrieves a registered component by its tag name.
  *
  * @typeParam P - The props type for the component
- * @typeParam X - The exports type that the child can expose
+ * @typeParam X - The exports type that the host can expose
  * @param tag - The unique tag identifier of the component
  * @returns The component factory function, or undefined if not found
  *

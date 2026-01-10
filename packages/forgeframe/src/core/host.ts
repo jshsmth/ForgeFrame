@@ -421,7 +421,7 @@ export class HostComponent<P extends Record<string, unknown>> {
         const error = err instanceof Error ? err : new Error(String(err));
         console.error('Error deserializing props:', error);
         this.event.emit(EVENT.ERROR, error);
-        throw error; // Propagate to parent so it knows the update failed
+        throw error; // Propagate to consumer so it knows the update failed
       }
     });
   }
