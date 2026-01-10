@@ -11,8 +11,10 @@ import {
   componentCache,
   instance,
   modalOverlay,
+  modalBody,
   setInstance,
   setModalOverlay,
+  setModalBody,
   setCurrentConfig,
   setPropValue,
 } from './state';
@@ -139,6 +141,7 @@ export function createModalTemplate(config: PlaygroundConfig) {
       overlay.appendChild(modal);
 
       setModalOverlay(overlay);
+      setModalBody(body);
       return overlay;
     },
     props: buildPropsSchema(config),
@@ -148,15 +151,25 @@ export function createModalTemplate(config: PlaygroundConfig) {
   return component;
 }
 
-export function createComponent(config: PlaygroundConfig) {
+export function createComponent(config: PlaygroundConfig, context: 'iframe' | 'popup' = 'iframe') {
   // Create fresh component with unique tag each time to avoid registration conflicts
   // (unlike modals which can be cached since they append to body fresh each time)
   const uniqueTag = `${config.tag}-${Date.now()}`;
 
+  // For popup context, use modalStyle dimensions as fallback since '100%' doesn't work for popups
+  let dimensions = config.dimensions as { width?: string | number; height?: string | number };
+  if (context === 'popup') {
+    const ms = config.modalStyle || {};
+    dimensions = {
+      width: ms.width || 500,
+      height: ms.height || 400,
+    };
+  }
+
   const component = ForgeFrame.create<DynamicProps>({
     tag: uniqueTag,
     url: config.url,
-    dimensions: config.dimensions as { width?: string | number; height?: string | number },
+    dimensions,
     style: config.style as Record<string, string>,
     attributes: config.attributes,
     autoResize: config.autoResize,
@@ -209,7 +222,7 @@ export async function renderComponent(parseConfig: () => PlaygroundConfig | null
     const useModal = currentContext === 'iframe' && currentIframeStyle === 'modal';
     const Component = useModal
       ? createModalTemplate(config)
-      : createComponent(config);
+      : createComponent(config, currentContext);
 
     // Build props object with current values + callbacks
     const props: DynamicProps = {
@@ -241,6 +254,7 @@ export async function renderComponent(parseConfig: () => PlaygroundConfig | null
       if (modalOverlay) {
         modalOverlay.remove();
         setModalOverlay(null);
+        setModalBody(null);
       }
       // Clear container for embedded iframes (keep only the placeholder)
       if (!useModal) {
@@ -261,6 +275,16 @@ export async function renderComponent(parseConfig: () => PlaygroundConfig | null
     });
     newInstance.event.on('resize', (dims) => {
       log(`Event: resize - ${JSON.stringify(dims)}`, 'info');
+      // Also resize the modal body container if in modal mode
+      if (useModal && modalBody && dims) {
+        const { width, height } = dims as { width?: number | string; height?: number | string };
+        if (width !== undefined) {
+          modalBody.style.width = typeof width === 'number' ? `${width}px` : width;
+        }
+        if (height !== undefined) {
+          modalBody.style.height = typeof height === 'number' ? `${height}px` : height;
+        }
+      }
     });
     newInstance.event.on('focus', () => {
       log('Event: focus', 'info');
