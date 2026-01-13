@@ -867,12 +867,6 @@ export interface GetPeerInstancesOptions {
   anyConsumer?: boolean;
 }
 
-/**
- * @deprecated Use {@link GetPeerInstancesOptions} instead. Will be removed in v2.
- * @public
- */
-export type GetSiblingsOptions = GetPeerInstancesOptions;
-
 // ============================================================================
 // Host Component Types
 // ============================================================================

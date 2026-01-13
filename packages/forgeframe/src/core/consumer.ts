@@ -16,7 +16,7 @@ import type {
   TemplateContext,
   ConsumerExports,
   SiblingInfo,
-  GetSiblingsOptions,
+  GetPeerInstancesOptions,
   HostComponentRef,
   ForgeFrameComponent,
 } from '../types';
@@ -879,7 +879,7 @@ export class ConsumerComponent<P extends Record<string, unknown>, X = unknown>
       return { success: true };
     });
 
-    this.messenger.on<{ uid: string; tag: string; options?: GetSiblingsOptions }>(
+    this.messenger.on<{ uid: string; tag: string; options?: GetPeerInstancesOptions }>(
       MESSAGE_NAME.GET_SIBLINGS,
       async (request) => {
         const siblings: SiblingInfo[] = [];
