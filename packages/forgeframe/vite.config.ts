@@ -5,13 +5,17 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      formats: ['es'],
+      name: 'ForgeFrame',
+      formats: ['es', 'umd'],
       fileName: 'forgeframe',
     },
     rollupOptions: {
       external: ['react', 'react-dom'],
       output: {
-        globals: {},
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDOM',
+        },
         exports: 'named',
       },
     },
