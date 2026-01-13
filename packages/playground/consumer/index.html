@@ -97,7 +97,7 @@
         color: #fff;
       }
 
-      /* Main 2x2 Grid */
+      /* Main Grid: Code on left, Preview and Events on right */
       .main {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -106,6 +106,9 @@
         background: #e0e0e0;
         flex: 1;
         min-height: 0;
+      }
+      .main > .panel:first-child {
+        grid-row: 1 / -1;
       }
 
       /* Panel Base */
@@ -136,38 +139,6 @@
         flex: 1;
         overflow: auto;
         min-height: 0;
-      }
-
-      /* JSON Editor Panel */
-      .panel:first-child .panel-content {
-        overflow: hidden; /* Prevent double scrollbar - textarea handles its own scroll */
-      }
-      #json-editor {
-        width: 100%;
-        height: 100%;
-        background: #fff;
-        color: #333;
-        border: none;
-        padding: 0.75rem;
-        font-family: 'SF Mono', 'Consolas', monospace;
-        font-size: 0.8rem;
-        line-height: 1.5;
-        resize: none;
-        outline: none;
-        tab-size: 2;
-        overflow: auto;
-      }
-      .editor-error {
-        padding: 0.4rem 0.75rem;
-        background: #fff5f5;
-        color: #c00;
-        font-size: 0.7rem;
-        font-family: monospace;
-        border-top: 1px solid #fcc;
-        display: none;
-      }
-      .editor-error.visible {
-        display: block;
       }
 
       /* Code Preview Panel */
@@ -305,6 +276,88 @@
       .prop-item button:hover {
         background: #f5f5f5;
       }
+      .btn-remove-prop {
+        color: #999;
+        padding: 0.15rem 0.35rem !important;
+        font-size: 0.8rem !important;
+        line-height: 1;
+      }
+      .btn-remove-prop:hover {
+        color: #dc3545;
+        background: #fff5f5 !important;
+        border-color: #dc3545 !important;
+      }
+
+      /* Add Prop */
+      .add-prop-container {
+        display: flex;
+        align-items: center;
+        margin-left: auto;
+      }
+      .btn-add-prop {
+        padding: 0.25rem 0.5rem;
+        background: #fff;
+        border: 1px dashed #ccc;
+        border-radius: 3px;
+        color: #666;
+        cursor: pointer;
+        font-size: 0.65rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+      .btn-add-prop:hover {
+        border-color: #e94560;
+        color: #e94560;
+      }
+      .add-prop-form {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .add-prop-form input {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        color: #333;
+        padding: 0.25rem 0.4rem;
+        font-size: 0.7rem;
+        width: 80px;
+      }
+      .add-prop-form input:focus {
+        outline: none;
+        border-color: #e94560;
+      }
+      .add-prop-form select {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        color: #333;
+        padding: 0.2rem 0.3rem;
+        font-size: 0.7rem;
+      }
+      .add-prop-form button {
+        padding: 0.25rem 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.65rem;
+      }
+      #btn-confirm-add {
+        background: #28a745;
+        border-color: #28a745;
+        color: #fff;
+      }
+      #btn-confirm-add:hover {
+        background: #218838;
+      }
+      #btn-cancel-add {
+        background: #fff;
+        color: #666;
+      }
+      #btn-cancel-add:hover {
+        background: #f5f5f5;
+      }
 
       /* Component Container */
       #component-container {
@@ -417,16 +470,14 @@
     </header>
 
     <main class="main">
-      <!-- Top Left: JSON Config -->
+      <!-- Left: Generated Code -->
       <div class="panel">
         <div class="panel-header">
-          <h3>Component Options</h3>
-          <button class="btn-secondary" id="btn-reset" style="padding: 0.2rem 0.4rem; font-size: 0.65rem;">Reset</button>
+          <h3>Generated Code</h3>
         </div>
-        <div class="panel-content">
-          <textarea id="json-editor" spellcheck="false"></textarea>
+        <div class="panel-content code-preview">
+          <pre><code class="language-typescript" id="code-output"></code></pre>
         </div>
-        <div class="editor-error" id="editor-error"></div>
       </div>
 
       <!-- Top Right: Component Preview -->
@@ -448,16 +499,6 @@
         </div>
         <div id="component-container">
           <div class="container-placeholder">Click "Render" to load component</div>
-        </div>
-      </div>
-
-      <!-- Bottom Left: Generated Code -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3>Generated Code</h3>
-        </div>
-        <div class="panel-content code-preview">
-          <pre><code class="language-typescript" id="code-output"></code></pre>
         </div>
       </div>
 

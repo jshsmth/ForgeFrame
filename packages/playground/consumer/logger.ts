@@ -32,15 +32,6 @@ export function setButtonsEnabled(rendered: boolean) {
   elements.container.classList.toggle('has-component', rendered);
 }
 
-export function showEditorError(message: string | null) {
-  if (message) {
-    elements.editorError.textContent = message;
-    elements.editorError.classList.add('visible');
-  } else {
-    elements.editorError.classList.remove('visible');
-  }
-}
-
 export function clearLog() {
   elements.eventLog.innerHTML = '';
 }
