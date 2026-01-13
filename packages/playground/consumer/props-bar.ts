@@ -8,10 +8,11 @@ import type { PlaygroundConfig, DynamicProps } from './types';
 
 export function getDefaultValue(propDef: Record<string, unknown>): unknown {
   if (propDef.default !== undefined) return propDef.default;
-  switch (propDef.type) {
-    case 'STRING': return '';
-    case 'NUMBER': return 0;
-    case 'BOOLEAN': return false;
+  const type = (propDef.type as string || '').toLowerCase();
+  switch (type) {
+    case 'string': return '';
+    case 'number': return 0;
+    case 'boolean': return false;
     default: return '';
   }
 }
@@ -36,9 +37,9 @@ export function renderPropsBar(config: PlaygroundConfig) {
   elements.propsBar.innerHTML = Object.entries(props)
     .map(([key, def]) => {
       const propDef = def as Record<string, unknown>;
-      const type = propDef.type as string;
+      const type = ((propDef.type as string) || '').toLowerCase();
       const value = currentPropValues[key] ?? getDefaultValue(propDef);
-      const inputType = type === 'NUMBER' ? 'number' : 'text';
+      const inputType = type === 'number' ? 'number' : 'text';
 
       return `
         <div class="prop-item">
@@ -60,10 +61,10 @@ export function renderPropsBar(config: PlaygroundConfig) {
       const propDef = props[propName] as Record<string, unknown>;
       let value: unknown = input.value;
 
-      // Convert to correct type
-      if (propDef.type === 'NUMBER') {
+      const type = ((propDef.type as string) || '').toLowerCase();
+      if (type === 'number') {
         value = parseFloat(input.value) || 0;
-      } else if (propDef.type === 'BOOLEAN') {
+      } else if (type === 'boolean') {
         value = input.value === 'true';
       }
 
@@ -83,9 +84,10 @@ export function renderPropsBar(config: PlaygroundConfig) {
       const propDef = props[propName] as Record<string, unknown>;
       let value: unknown = (input as HTMLInputElement).value;
 
-      if (propDef.type === 'NUMBER') {
+      const type = ((propDef.type as string) || '').toLowerCase();
+      if (type === 'number') {
         value = parseFloat((input as HTMLInputElement).value) || 0;
-      } else if (propDef.type === 'BOOLEAN') {
+      } else if (type === 'boolean') {
         value = (input as HTMLInputElement).value === 'true';
       }
 

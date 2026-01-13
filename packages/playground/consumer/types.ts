@@ -34,6 +34,7 @@ export interface PlaygroundConfig {
   timeout?: number;
   modalStyle?: ModalStyle;
   props?: {
+    /** Prop definitions. Type can be: 'string', 'number', 'boolean', 'function', 'array', 'object' */
     name?: { type: string; required?: boolean; default?: string };
     count?: { type: string; default?: number };
     [key: string]: unknown;

@@ -9,7 +9,6 @@
  */
 
 import type {
-  PropType,
   ContextType,
   SerializationType,
   EventType,
@@ -181,8 +180,10 @@ export interface PropContext<P> {
  *
  * @example
  * ```typescript
+ * import { prop } from 'forgeframe';
+ *
  * const propDef: PropDefinition<string> = {
- *   type: PROP_TYPE.STRING,
+ *   schema: prop.string(),
  *   required: true,
  *   default: 'hello',
  *   validate: ({ value }) => {
@@ -195,35 +196,30 @@ export interface PropContext<P> {
  */
 export interface PropDefinition<T = unknown, P = Record<string, unknown>> {
   /**
-   * Standard Schema validator (Zod, Valibot, ArkType, etc.)
+   * Standard Schema validator for type checking and validation.
    *
    * @remarks
-   * When provided, the schema handles both type checking and validation.
-   * The `type` property becomes optional when using a schema.
+   * Accepts any StandardSchemaV1-compliant schema including ForgeFrame's
+   * built-in `prop.*` schemas, Zod, Valibot, ArkType, and others.
    *
    * @example
    * ```typescript
+   * import { prop } from 'forgeframe';
    * import { z } from 'zod';
    *
    * const props = {
-   *   email: {
-   *     schema: z.string().email(),
-   *     required: true,
-   *   },
+   *   // Using ForgeFrame's prop schemas
+   *   name: prop.string().min(1),
+   *   count: prop.number().default(0),
+   *
+   *   // Or using Zod schemas
+   *   email: { schema: z.string().email(), required: true },
    * };
    * ```
    *
    * @see https://standardschema.dev/
    */
   schema?: StandardSchemaV1<unknown, T>;
-
-  /**
-   * The prop type (STRING, NUMBER, FUNCTION, etc.)
-   *
-   * @remarks
-   * Optional when `schema` is provided. Required otherwise.
-   */
-  type?: PropType;
 
   /** Whether the prop is required */
   required?: boolean;
@@ -429,11 +425,13 @@ export interface HostComponentRef {
  *
  * @example
  * ```typescript
+ * import { prop } from 'forgeframe';
+ *
  * const options: ComponentOptions<MyProps> = {
  *   tag: 'my-component',
  *   url: 'https://example.com/component',
  *   props: {
- *     name: { type: PROP_TYPE.STRING, required: true },
+ *     name: prop.string().required(),
  *   },
  *   dimensions: { width: 400, height: 300 },
  * };

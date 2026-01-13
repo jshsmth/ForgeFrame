@@ -5,8 +5,8 @@ import {
   validateWithSchema,
   type StandardSchemaV1,
 } from '@/props/schema';
+import { prop } from '@/props/prop';
 import type { PropsDefinition } from '@/types';
-import { PROP_TYPE } from '@/constants';
 
 // ============================================================================
 // Test Utilities
@@ -269,20 +269,17 @@ describe('validateProps with schema', () => {
     expect(validateFn).not.toHaveBeenCalled();
   });
 
-  it('should prefer schema over type when both are provided', () => {
+  it('should handle schema that transforms values', () => {
     // Schema accepts any value and transforms to string
     const schema = createMockSchema<string>((v) => ({
       value: `processed: ${v}`,
     }));
 
     const definitions: PropsDefinition<{ value: string }> = {
-      value: {
-        schema,
-        type: PROP_TYPE.NUMBER, // Should be ignored
-      },
+      value: { schema },
     };
 
-    // Pass a number - type validation would fail, but schema handles it
+    // Pass a number - schema transforms it to string
     const props = { value: 42 as unknown as string };
     validateProps(props, definitions);
 
@@ -291,14 +288,14 @@ describe('validateProps with schema', () => {
 });
 
 // ============================================================================
-// Backwards Compatibility Tests
+// Prop Schema API Tests
 // ============================================================================
 
-describe('backwards compatibility', () => {
-  it('should continue to work with type-only validation', () => {
+describe('prop schema API', () => {
+  it('should work with direct prop schemas', () => {
     const definitions: PropsDefinition<{ name: string; age: number }> = {
-      name: { type: PROP_TYPE.STRING },
-      age: { type: PROP_TYPE.NUMBER },
+      name: prop.string(),
+      age: prop.number(),
     };
 
     // Valid props
@@ -309,13 +306,13 @@ describe('backwards compatibility', () => {
     // Invalid type
     expect(() =>
       validateProps({ name: 123 as unknown as string, age: 25 }, definitions)
-    ).toThrow('expected type "string"');
+    ).toThrow('Expected string');
   });
 
-  it('should continue to work with custom validate function only', () => {
+  it('should work with custom validate function alongside schema', () => {
     const definitions: PropsDefinition<{ email: string }> = {
       email: {
-        type: PROP_TYPE.STRING,
+        schema: prop.string(),
         validate: ({ value }) => {
           if (!value.includes('@')) {
             throw new Error('Invalid email format');
@@ -333,9 +330,9 @@ describe('backwards compatibility', () => {
     );
   });
 
-  it('should continue to work with required validation', () => {
+  it('should work with required validation', () => {
     const definitions: PropsDefinition<{ name: string }> = {
-      name: { type: PROP_TYPE.STRING, required: true },
+      name: { schema: prop.string(), required: true },
     };
 
     expect(() =>
@@ -343,8 +340,8 @@ describe('backwards compatibility', () => {
     ).toThrow('required');
   });
 
-  it('should allow mixing schema and type-based props', () => {
-    const schema = createMockSchema<{ id: string }>((v) => {
+  it('should allow mixing custom schema and prop schemas', () => {
+    const customSchema = createMockSchema<{ id: string }>((v) => {
       if (typeof v === 'object' && v !== null && 'id' in v) {
         return { value: v as { id: string } };
       }
@@ -355,8 +352,8 @@ describe('backwards compatibility', () => {
       user: { id: string };
       callback: () => void;
     }> = {
-      user: { schema },
-      callback: { type: PROP_TYPE.FUNCTION },
+      user: { schema: customSchema },
+      callback: prop.function(),
     };
 
     const callback = vi.fn();

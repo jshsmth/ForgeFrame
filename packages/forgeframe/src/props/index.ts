@@ -9,7 +9,6 @@
 
 export {
   BUILTIN_PROP_DEFINITIONS,
-  getDefaultForType,
   type BuiltinProps,
 } from './definitions';
 
@@ -40,3 +39,19 @@ export {
   type InferInput,
   type InferOutput,
 } from './schema';
+
+export {
+  prop,
+  PropSchema,
+  StringSchema,
+  NumberSchema,
+  BooleanSchema,
+  FunctionSchema,
+  ArraySchema,
+  ObjectSchema,
+  LiteralSchema,
+  EnumSchema,
+  AnySchema,
+  type Prop,
+  type InferObjectShape,
+} from './prop';

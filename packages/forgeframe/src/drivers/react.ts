@@ -181,14 +181,13 @@ export interface ReactComponentType<P> {
  * @example
  * ```tsx
  * import React from 'react';
- * import ForgeFrame from 'forgeframe';
- * import { createReactDriver } from 'forgeframe/drivers/react';
+ * import ForgeFrame, { prop, createReactDriver } from 'forgeframe';
  *
  * const LoginComponent = ForgeFrame.create({
  *   tag: 'login-component',
  *   url: 'https://example.com/login',
  *   props: {
- *     onLogin: { type: ForgeFrame.PROP_TYPE.FUNCTION },
+ *     onLogin: prop.function<(user: { id: string }) => void>(),
  *   },
  * });
  *

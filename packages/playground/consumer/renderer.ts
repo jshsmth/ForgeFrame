@@ -1,7 +1,7 @@
 /**
  * Component rendering for ForgeFrame Playground
  */
-import ForgeFrame from 'forgeframe';
+import ForgeFrame, { prop, type PropSchema } from 'forgeframe';
 import { elements } from './elements';
 import { log, setStatus, setButtonsEnabled } from './logger';
 import {
@@ -20,26 +20,65 @@ import {
 } from './state';
 import type { PlaygroundConfig, DynamicProps } from './types';
 
+/**
+ * Maps string type names to prop schema builders
+ */
+function createPropSchema(typeStr: string, options: { required?: boolean; default?: unknown }): PropSchema<unknown> {
+  const { required, default: defaultValue } = options;
+
+  let schema: PropSchema<unknown>;
+
+  switch (typeStr.toUpperCase()) {
+    case 'NUMBER':
+      schema = prop.number();
+      break;
+    case 'BOOLEAN':
+      schema = prop.boolean();
+      break;
+    case 'FUNCTION':
+      schema = prop.function();
+      break;
+    case 'ARRAY':
+      schema = prop.array();
+      break;
+    case 'OBJECT':
+      schema = prop.object();
+      break;
+    case 'STRING':
+    default:
+      schema = prop.string();
+      break;
+  }
+
+  if (defaultValue !== undefined) {
+    schema = schema.default(defaultValue as never);
+  }
+
+  if (!required) {
+    schema = schema.optional();
+  }
+
+  return schema;
+}
+
 export function buildPropsSchema(config: PlaygroundConfig) {
-  const schema: Record<string, { type: string; required?: boolean; default?: unknown }> = {};
+  const schema: Record<string, PropSchema<unknown>> = {};
 
   // Add user-defined props from config
   for (const [key, def] of Object.entries(config.props || {})) {
     const propDef = def as Record<string, unknown>;
     const typeStr = (propDef.type as string) || 'STRING';
-    const type = ForgeFrame.PROP_TYPE[typeStr as keyof typeof ForgeFrame.PROP_TYPE] || ForgeFrame.PROP_TYPE.STRING;
 
-    schema[key] = {
-      type,
+    schema[key] = createPropSchema(typeStr, {
       required: propDef.required as boolean,
       default: propDef.default,
-    };
+    });
   }
 
-  // Always add callback props
-  schema.onGreet = { type: ForgeFrame.PROP_TYPE.FUNCTION };
-  schema.onClose = { type: ForgeFrame.PROP_TYPE.FUNCTION };
-  schema.onError = { type: ForgeFrame.PROP_TYPE.FUNCTION };
+  // Always add callback props (optional functions)
+  schema.onGreet = prop.function().optional();
+  schema.onClose = prop.function().optional();
+  schema.onError = prop.function().optional();
 
   return schema;
 }
@@ -201,9 +240,10 @@ export async function renderComponent(parseConfig: () => PlaygroundConfig | null
     const propDef = (config.props || {})[propName] as Record<string, unknown> | undefined;
     let value: unknown = (input as HTMLInputElement).value;
 
-    if (propDef?.type === 'NUMBER') {
+    const type = ((propDef?.type as string) || '').toLowerCase();
+    if (type === 'number') {
       value = parseFloat((input as HTMLInputElement).value) || 0;
-    } else if (propDef?.type === 'BOOLEAN') {
+    } else if (type === 'boolean') {
       value = (input as HTMLInputElement).value === 'true';
     }
 
