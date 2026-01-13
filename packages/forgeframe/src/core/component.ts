@@ -79,16 +79,18 @@ function validateComponentOptions<P>(options: ComponentOptions<P>): void {
  *
  * @example
  * ```typescript
- * const LoginComponent = create({
+ * import ForgeFrame, { prop } from 'forgeframe';
+ *
+ * const LoginComponent = ForgeFrame.create({
  *   tag: 'login-component',
  *   url: 'https://auth.example.com/login',
  *   props: {
- *     email: { type: PROP_TYPE.STRING },
- *     onLogin: { type: PROP_TYPE.FUNCTION },
+ *     email: prop.string(),
+ *     onLogin: prop.function<(user: { id: string }) => void>(),
  *   },
  * });
  *
- * const instance = LoginComponent({ email: 'user@example.com' });
+ * const instance = LoginComponent({ email: 'user@example.com', onLogin: () => {} });
  * await instance.render('#container');
  * ```
  *

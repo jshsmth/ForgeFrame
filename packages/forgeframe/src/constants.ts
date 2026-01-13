@@ -1,47 +1,4 @@
 /**
- * Prop type constants for defining component props.
- *
- * @remarks
- * These constants define the valid types for props passed between consumer and host components.
- * Use these when defining prop definitions in your component configuration.
- *
- * @example
- * ```typescript
- * const MyComponent = ForgeFrame.create({
- *   tag: 'my-component',
- *   url: '/component.html',
- *   props: {
- *     name: { type: PROP_TYPE.STRING },
- *     count: { type: PROP_TYPE.NUMBER },
- *     onSubmit: { type: PROP_TYPE.FUNCTION },
- *   },
- * });
- * ```
- *
- * @public
- */
-export const PROP_TYPE = {
-  /** String prop type */
-  STRING: 'string',
-  /** Object prop type */
-  OBJECT: 'object',
-  /** Function prop type - serialized for cross-domain calls */
-  FUNCTION: 'function',
-  /** Boolean prop type */
-  BOOLEAN: 'boolean',
-  /** Number prop type */
-  NUMBER: 'number',
-  /** Array prop type */
-  ARRAY: 'array',
-} as const;
-
-/**
- * Union type of all valid prop types.
- * @public
- */
-export type PropType = (typeof PROP_TYPE)[keyof typeof PROP_TYPE];
-
-/**
  * Rendering context types for components.
  *
  * @remarks

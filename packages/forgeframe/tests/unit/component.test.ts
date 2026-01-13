@@ -9,7 +9,8 @@ import {
   unregisterComponent,
 } from '@/core/component';
 import { isHost, getXProps } from '@/core/host';
-import { PROP_TYPE, CONTEXT } from '@/constants';
+import { CONTEXT } from '@/constants';
+import { prop } from '@/props/prop';
 
 describe('Component Creation', () => {
   afterEach(() => {
@@ -33,8 +34,8 @@ describe('Component Creation', () => {
       tag: 'my-component-with-props',
       url: 'https://example.com/component',
       props: {
-        email: { type: PROP_TYPE.STRING, required: true },
-        onLogin: { type: PROP_TYPE.FUNCTION },
+        email: { schema: prop.string(), required: true },
+        onLogin: prop.function(),
       },
     });
 
@@ -129,7 +130,7 @@ describe('Component Instance', () => {
       tag: 'eligible-component',
       url: 'https://example.com',
       props: {
-        allowed: { type: PROP_TYPE.BOOLEAN, required: true },
+        allowed: { schema: prop.boolean(), required: true },
       },
       eligible: ({ props }) => ({
         eligible: props.allowed === true,
@@ -190,7 +191,7 @@ describe('Component Registry', () => {
         tag: 'typed-component',
         url: 'https://example.com',
         props: {
-          name: { type: PROP_TYPE.STRING },
+          name: prop.string(),
         },
       });
 

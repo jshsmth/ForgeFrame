@@ -6,8 +6,9 @@ import {
   propsToQueryParams,
 } from '@/props/normalize';
 import { cloneProps } from '@/props/serialize';
-import { BUILTIN_PROP_DEFINITIONS, getDefaultForType } from '@/props/definitions';
-import { PROP_TYPE } from '@/constants';
+import { BUILTIN_PROP_DEFINITIONS } from '@/props/definitions';
+import { prop } from '@/props/prop';
+import { isStandardSchema } from '@/props/schema';
 import type { PropsDefinition, PropContext } from '@/types';
 
 describe('Props Normalization', () => {
@@ -32,8 +33,8 @@ describe('Props Normalization', () => {
 
   it('should merge user props with defaults', () => {
     const definitions: PropsDefinition<{ name: string; count: number }> = {
-      name: { type: PROP_TYPE.STRING, default: 'default-name' },
-      count: { type: PROP_TYPE.NUMBER, default: 0 },
+      name: prop.string().default('default-name'),
+      count: prop.number().default(0),
     };
 
     const result = normalizeProps(
@@ -49,7 +50,7 @@ describe('Props Normalization', () => {
   it('should handle function defaults', () => {
     const definitions: PropsDefinition<{ timestamp: number }> = {
       timestamp: {
-        type: PROP_TYPE.NUMBER,
+        schema: prop.number(),
         default: () => 12345,
       },
     };
@@ -62,7 +63,7 @@ describe('Props Normalization', () => {
   it('should handle computed values', () => {
     const definitions: PropsDefinition<{ computed: string }> = {
       computed: {
-        type: PROP_TYPE.STRING,
+        schema: prop.string(),
         value: (ctx) => `uid:${ctx.uid}`,
       },
     };
@@ -75,7 +76,7 @@ describe('Props Normalization', () => {
   it('should handle prop aliases', () => {
     const definitions: PropsDefinition<{ email: string }> = {
       email: {
-        type: PROP_TYPE.STRING,
+        schema: prop.string(),
         alias: 'userEmail',
       },
     };
@@ -92,7 +93,7 @@ describe('Props Normalization', () => {
   it('should apply decorate function', () => {
     const definitions: PropsDefinition<{ name: string }> = {
       name: {
-        type: PROP_TYPE.STRING,
+        schema: prop.string(),
         decorate: ({ value }) => (value as string).toUpperCase(),
       },
     };
@@ -118,7 +119,7 @@ describe('Props Normalization', () => {
 describe('Props Validation', () => {
   it('should throw for missing required props', () => {
     const definitions: PropsDefinition<{ email: string }> = {
-      email: { type: PROP_TYPE.STRING, required: true },
+      email: { schema: prop.string(), required: true },
     };
 
     expect(() =>
@@ -126,19 +127,19 @@ describe('Props Validation', () => {
     ).toThrow('Prop "email" is required');
   });
 
-  it('should throw for invalid type', () => {
+  it('should throw for invalid type via schema', () => {
     const definitions: PropsDefinition<{ count: number }> = {
-      count: { type: PROP_TYPE.NUMBER },
+      count: prop.number(),
     };
 
     expect(() =>
       validateProps({ count: 'not a number' } as unknown as { count: number }, definitions)
-    ).toThrow('expected type "number"');
+    ).toThrow('Expected number');
   });
 
   it('should validate string type', () => {
     const definitions: PropsDefinition<{ name: string }> = {
-      name: { type: PROP_TYPE.STRING },
+      name: prop.string(),
     };
 
     expect(() => validateProps({ name: 'valid' }, definitions)).not.toThrow();
@@ -149,7 +150,7 @@ describe('Props Validation', () => {
 
   it('should validate boolean type', () => {
     const definitions: PropsDefinition<{ active: boolean }> = {
-      active: { type: PROP_TYPE.BOOLEAN },
+      active: prop.boolean(),
     };
 
     expect(() => validateProps({ active: true }, definitions)).not.toThrow();
@@ -160,7 +161,7 @@ describe('Props Validation', () => {
 
   it('should validate function type', () => {
     const definitions: PropsDefinition<{ callback: () => void }> = {
-      callback: { type: PROP_TYPE.FUNCTION },
+      callback: prop.function(),
     };
 
     expect(() => validateProps({ callback: () => {} }, definitions)).not.toThrow();
@@ -171,7 +172,7 @@ describe('Props Validation', () => {
 
   it('should validate array type', () => {
     const definitions: PropsDefinition<{ items: string[] }> = {
-      items: { type: PROP_TYPE.ARRAY },
+      items: prop.array(),
     };
 
     expect(() => validateProps({ items: ['a', 'b'] }, definitions)).not.toThrow();
@@ -182,7 +183,7 @@ describe('Props Validation', () => {
 
   it('should validate object type', () => {
     const definitions: PropsDefinition<{ data: Record<string, unknown> }> = {
-      data: { type: PROP_TYPE.OBJECT },
+      data: prop.object(),
     };
 
     expect(() => validateProps({ data: { key: 'value' } }, definitions)).not.toThrow();
@@ -195,7 +196,7 @@ describe('Props Validation', () => {
     const customValidate = vi.fn();
     const definitions: PropsDefinition<{ email: string }> = {
       email: {
-        type: PROP_TYPE.STRING,
+        schema: prop.string(),
         validate: customValidate,
       },
     };
@@ -208,9 +209,19 @@ describe('Props Validation', () => {
     });
   });
 
-  it('should skip undefined optional props', () => {
+  it('should skip undefined optional props with PropDefinition', () => {
     const definitions: PropsDefinition<{ optional?: string }> = {
-      optional: { type: PROP_TYPE.STRING, required: false },
+      optional: { schema: prop.string().optional(), required: false },
+    };
+
+    expect(() =>
+      validateProps({ optional: undefined } as { optional?: string }, definitions)
+    ).not.toThrow();
+  });
+
+  it('should skip undefined optional props with direct schema', () => {
+    const definitions: PropsDefinition<{ optional?: string }> = {
+      optional: prop.string().optional(),
     };
 
     expect(() =>
@@ -222,8 +233,8 @@ describe('Props Validation', () => {
 describe('Props for Host', () => {
   it('should filter props with sendToHost: false', () => {
     const definitions: PropsDefinition<{ visible: string; hidden: string }> = {
-      visible: { type: PROP_TYPE.STRING, sendToHost: true },
-      hidden: { type: PROP_TYPE.STRING, sendToHost: false },
+      visible: { schema: prop.string(), sendToHost: true },
+      hidden: { schema: prop.string(), sendToHost: false },
     };
 
     const result = getPropsForHost(
@@ -239,7 +250,7 @@ describe('Props for Host', () => {
 
   it('should filter sameDomain props when cross-domain', () => {
     const definitions: PropsDefinition<{ secret: string }> = {
-      secret: { type: PROP_TYPE.STRING, sameDomain: true },
+      secret: { schema: prop.string(), sameDomain: true },
     };
 
     const crossDomainResult = getPropsForHost(
@@ -263,7 +274,7 @@ describe('Props for Host', () => {
   it('should filter by trustedDomains', () => {
     const definitions: PropsDefinition<{ data: string }> = {
       data: {
-        type: PROP_TYPE.STRING,
+        schema: prop.string(),
         trustedDomains: ['https://trusted.com', 'https://also-trusted.com'],
       },
     };
@@ -289,7 +300,7 @@ describe('Props for Host', () => {
   it('should apply hostDecorate function', () => {
     const definitions: PropsDefinition<{ value: string }> = {
       value: {
-        type: PROP_TYPE.STRING,
+        schema: prop.string(),
         hostDecorate: ({ value }) => `host:${value}`,
       },
     };
@@ -308,8 +319,8 @@ describe('Props for Host', () => {
 describe('Props to Query Params', () => {
   it('should convert props with queryParam: true', () => {
     const definitions: PropsDefinition<{ token: string; secret: string }> = {
-      token: { type: PROP_TYPE.STRING, queryParam: true },
-      secret: { type: PROP_TYPE.STRING },
+      token: { schema: prop.string(), queryParam: true },
+      secret: { schema: prop.string() },
     };
 
     const params = propsToQueryParams(
@@ -323,7 +334,7 @@ describe('Props to Query Params', () => {
 
   it('should use custom param name', () => {
     const definitions: PropsDefinition<{ userId: string }> = {
-      userId: { type: PROP_TYPE.STRING, queryParam: 'user_id' },
+      userId: { schema: prop.string(), queryParam: 'user_id' },
     };
 
     const params = propsToQueryParams({ userId: '123' }, definitions);
@@ -334,7 +345,7 @@ describe('Props to Query Params', () => {
   it('should use custom transform function', () => {
     const definitions: PropsDefinition<{ data: { a: number } }> = {
       data: {
-        type: PROP_TYPE.OBJECT,
+        schema: prop.object(),
         queryParam: ({ value }) => btoa(JSON.stringify(value)),
       },
     };
@@ -346,7 +357,7 @@ describe('Props to Query Params', () => {
 
   it('should JSON stringify objects', () => {
     const definitions: PropsDefinition<{ config: Record<string, unknown> }> = {
-      config: { type: PROP_TYPE.OBJECT, queryParam: true },
+      config: { schema: prop.object(), queryParam: true },
     };
 
     const params = propsToQueryParams(
@@ -359,7 +370,7 @@ describe('Props to Query Params', () => {
 
   it('should skip function props', () => {
     const definitions: PropsDefinition<{ callback: () => void }> = {
-      callback: { type: PROP_TYPE.FUNCTION, queryParam: true },
+      callback: { schema: prop.function(), queryParam: true },
     };
 
     const params = propsToQueryParams({ callback: () => {} }, definitions);
@@ -369,7 +380,7 @@ describe('Props to Query Params', () => {
 
   it('should skip undefined values', () => {
     const definitions: PropsDefinition<{ optional?: string }> = {
-      optional: { type: PROP_TYPE.STRING, queryParam: true },
+      optional: { schema: prop.string().optional(), queryParam: true },
     };
 
     const params = propsToQueryParams({ optional: undefined } as { optional?: string }, definitions);
@@ -415,40 +426,29 @@ describe('Clone Props', () => {
   });
 });
 
-describe('getDefaultForType', () => {
-  it('should return correct defaults for each type', () => {
-    expect(getDefaultForType(PROP_TYPE.STRING)).toBe('');
-    expect(getDefaultForType(PROP_TYPE.NUMBER)).toBe(0);
-    expect(getDefaultForType(PROP_TYPE.BOOLEAN)).toBe(false);
-    expect(getDefaultForType(PROP_TYPE.ARRAY)).toEqual([]);
-    expect(getDefaultForType(PROP_TYPE.OBJECT)).toEqual({});
-    expect(getDefaultForType(PROP_TYPE.FUNCTION)).toBeUndefined();
-    expect(getDefaultForType('unknown')).toBeUndefined();
-  });
-});
-
 describe('BUILTIN_PROP_DEFINITIONS', () => {
-  it('should have uid prop', () => {
+  it('should have uid prop with schema', () => {
     expect(BUILTIN_PROP_DEFINITIONS.uid).toBeDefined();
-    expect(BUILTIN_PROP_DEFINITIONS.uid.type).toBe(PROP_TYPE.STRING);
+    expect(BUILTIN_PROP_DEFINITIONS.uid.schema).toBeDefined();
+    expect(isStandardSchema(BUILTIN_PROP_DEFINITIONS.uid.schema)).toBe(true);
   });
 
-  it('should have tag prop', () => {
+  it('should have tag prop with schema', () => {
     expect(BUILTIN_PROP_DEFINITIONS.tag).toBeDefined();
-    expect(BUILTIN_PROP_DEFINITIONS.tag.type).toBe(PROP_TYPE.STRING);
+    expect(BUILTIN_PROP_DEFINITIONS.tag.schema).toBeDefined();
+    expect(isStandardSchema(BUILTIN_PROP_DEFINITIONS.tag.schema)).toBe(true);
   });
 
   it('should have dimensions prop with default', () => {
     expect(BUILTIN_PROP_DEFINITIONS.dimensions).toBeDefined();
-    expect(BUILTIN_PROP_DEFINITIONS.dimensions.type).toBe(PROP_TYPE.OBJECT);
-    expect(typeof BUILTIN_PROP_DEFINITIONS.dimensions.default).toBe('function');
+    expect(BUILTIN_PROP_DEFINITIONS.dimensions.schema).toBeDefined();
+    expect(isStandardSchema(BUILTIN_PROP_DEFINITIONS.dimensions.schema)).toBe(true);
   });
 
   it('should have timeout prop with default', () => {
     expect(BUILTIN_PROP_DEFINITIONS.timeout).toBeDefined();
-    expect(BUILTIN_PROP_DEFINITIONS.timeout.type).toBe(PROP_TYPE.NUMBER);
-    const defaultFn = BUILTIN_PROP_DEFINITIONS.timeout.default as () => number;
-    expect(defaultFn()).toBe(10000);
+    expect(BUILTIN_PROP_DEFINITIONS.timeout.schema).toBeDefined();
+    expect(isStandardSchema(BUILTIN_PROP_DEFINITIONS.timeout.schema)).toBe(true);
   });
 
   it('should have lifecycle callbacks', () => {
@@ -466,10 +466,11 @@ describe('BUILTIN_PROP_DEFINITIONS', () => {
       'onProps',
     ];
 
-    for (const prop of lifecycleProps) {
-      expect(BUILTIN_PROP_DEFINITIONS[prop]).toBeDefined();
-      expect(BUILTIN_PROP_DEFINITIONS[prop].type).toBe(PROP_TYPE.FUNCTION);
-      expect(BUILTIN_PROP_DEFINITIONS[prop].sendToHost).toBe(false);
+    for (const propName of lifecycleProps) {
+      expect(BUILTIN_PROP_DEFINITIONS[propName]).toBeDefined();
+      expect(BUILTIN_PROP_DEFINITIONS[propName].schema).toBeDefined();
+      expect(isStandardSchema(BUILTIN_PROP_DEFINITIONS[propName].schema)).toBe(true);
+      expect(BUILTIN_PROP_DEFINITIONS[propName].sendToHost).toBe(false);
     }
   });
 });

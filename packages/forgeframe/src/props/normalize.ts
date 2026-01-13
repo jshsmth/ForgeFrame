@@ -13,7 +13,6 @@ import type {
   PropContext,
   DomainMatcher,
 } from '../types';
-import { PROP_TYPE } from '../constants';
 import { BUILTIN_PROP_DEFINITIONS } from './definitions';
 import { matchDomain } from '../window/helpers';
 import { isStandardSchema, validateWithSchema } from './schema';
@@ -42,7 +41,11 @@ export function normalizeProps<P extends Record<string, unknown>>(
   const result = {} as P;
 
   for (const [key, def] of Object.entries(allDefs)) {
-    const definition = def as PropDefinition<unknown, P>;
+    // Support passing schema directly: `name: prop.string()` or `name: { schema: ... }`
+    const isDirectSchema = isStandardSchema(def);
+    const definition = isDirectSchema
+      ? ({ schema: def } as PropDefinition<unknown, P>)
+      : (def as PropDefinition<unknown, P>);
     let value: unknown;
 
     const aliasKey = definition.alias;
@@ -60,6 +63,13 @@ export function normalizeProps<P extends Record<string, unknown>>(
         typeof definition.default === 'function'
           ? (definition.default as (ctx: PropContext<P>) => unknown)(context)
           : definition.default;
+    } else if (definition.schema && isStandardSchema(definition.schema)) {
+      // Check if schema provides a default by validating undefined
+      // This allows prop.string().default('value') to work in normalizeProps
+      const schemaResult = definition.schema['~standard'].validate(undefined);
+      if (!(schemaResult instanceof Promise) && !schemaResult.issues) {
+        value = schemaResult.value;
+      }
     }
 
     if (value !== undefined && definition.decorate) {
@@ -92,50 +102,31 @@ export function validateProps<P extends Record<string, unknown>>(
   } as PropsDefinition<P>;
 
   for (const [key, def] of Object.entries(allDefs)) {
-    const definition = def as PropDefinition<unknown, P>;
+    // Support passing schema directly: `name: prop.string()` or `name: { schema: ... }`
+    const isDirectSchema = isStandardSchema(def);
+    const definition = isDirectSchema
+      ? ({ schema: def } as PropDefinition<unknown, P>)
+      : (def as PropDefinition<unknown, P>);
     let value: unknown = props[key as keyof P];
 
     if (definition.required && value === undefined) {
       throw new Error(`Prop "${key}" is required but was not provided`);
     }
 
-    if (value === undefined) continue;
-
+    // Validate using schema (handles type checking, defaults, and optional)
     if (definition.schema && isStandardSchema(definition.schema)) {
-      value = validateWithSchema(definition.schema, value, key);
-      (props as Record<string, unknown>)[key] = value;
-    } else if (definition.type && !validateType(value, definition.type)) {
-      throw new Error(
-        `Prop "${key}" expected type "${definition.type}" but got "${typeof value}"`
-      );
+      // Direct schemas handle undefined via .optional() and .default()
+      if (value !== undefined || isDirectSchema) {
+        value = validateWithSchema(definition.schema, value, key);
+        (props as Record<string, unknown>)[key] = value;
+      }
+    } else if (value === undefined) {
+      continue;
     }
 
     if (definition.validate) {
       definition.validate({ value, props });
     }
-  }
-}
-
-/**
- * Validates a value against a prop type.
- * @internal
- */
-function validateType(value: unknown, type: string): boolean {
-  switch (type) {
-    case PROP_TYPE.STRING:
-      return typeof value === 'string';
-    case PROP_TYPE.NUMBER:
-      return typeof value === 'number';
-    case PROP_TYPE.BOOLEAN:
-      return typeof value === 'boolean';
-    case PROP_TYPE.FUNCTION:
-      return typeof value === 'function';
-    case PROP_TYPE.ARRAY:
-      return Array.isArray(value);
-    case PROP_TYPE.OBJECT:
-      return typeof value === 'object' && value !== null && !Array.isArray(value);
-    default:
-      return true;
   }
 }
 
@@ -168,7 +159,11 @@ export function getPropsForHost<P extends Record<string, unknown>>(
   const result: Partial<P> = {};
 
   for (const [key, def] of Object.entries(allDefs)) {
-    const definition = def as PropDefinition<unknown, P>;
+    // Support passing schema directly: `name: prop.string()` or `name: { schema: ... }`
+    const isDirectSchema = isStandardSchema(def);
+    const definition = isDirectSchema
+      ? ({ schema: def } as PropDefinition<unknown, P>)
+      : (def as PropDefinition<unknown, P>);
     const value = props[key as keyof P];
 
     if (definition.sendToHost === false) continue;
@@ -211,11 +206,15 @@ export function propsToQueryParams<P extends Record<string, unknown>>(
   } as PropsDefinition<P>;
 
   for (const [key, def] of Object.entries(allDefs)) {
-    const definition = def as PropDefinition<unknown, P>;
+    // Support passing schema directly: `name: prop.string()` or `name: { schema: ... }`
+    const isDirectSchema = isStandardSchema(def);
+    const definition = isDirectSchema
+      ? ({ schema: def } as PropDefinition<unknown, P>)
+      : (def as PropDefinition<unknown, P>);
     const value = props[key as keyof P];
 
     if (value === undefined) continue;
-    if (definition.type === PROP_TYPE.FUNCTION) continue;
+    if (typeof value === 'function') continue;
     if (!definition.queryParam) continue;
 
     const paramName =

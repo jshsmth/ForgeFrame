@@ -9,15 +9,16 @@
  *
  * @example
  * ```typescript
- * import ForgeFrame from 'forgeframe';
+ * import ForgeFrame, { prop } from 'forgeframe';
  *
- * // Define a component
+ * // Define a component with schema-based props
  * const LoginComponent = ForgeFrame.create({
  *   tag: 'login-component',
  *   url: 'https://auth.example.com/login',
  *   props: {
- *     email: { type: ForgeFrame.PROP_TYPE.STRING },
- *     onLogin: { type: ForgeFrame.PROP_TYPE.FUNCTION },
+ *     email: prop.string().email(),
+ *     rememberMe: prop.boolean().default(false),
+ *     onLogin: prop.function<(user: { id: string }) => void>(),
  *   },
  * });
  *
@@ -42,7 +43,6 @@ import {
 
 // Constants
 import {
-  PROP_TYPE,
   PROP_SERIALIZATION,
   CONTEXT,
   EVENT,
@@ -54,6 +54,8 @@ import { PopupOpenError } from './render/popup';
 
 // Schema utilities
 import { isStandardSchema } from './props/schema';
+
+import { prop } from './props/prop';
 
 // Auto-initialize host if in a ForgeFrame window.
 // This makes window.xprops available automatically in host contexts.
@@ -89,15 +91,18 @@ export const ForgeFrame = {
    *
    * @example
    * ```typescript
+   * import ForgeFrame, { prop } from 'forgeframe';
+   *
    * const MyComponent = ForgeFrame.create({
    *   tag: 'my-component',
    *   url: 'https://example.com/component',
    *   props: {
-   *     onLogin: { type: ForgeFrame.PROP_TYPE.FUNCTION },
+   *     email: prop.string().email(),
+   *     onLogin: prop.function<(user: { id: string }) => void>(),
    *   },
    * });
    *
-   * const instance = MyComponent({ onLogin: (user) => {} });
+   * const instance = MyComponent({ email: 'user@example.com', onLogin: (user) => {} });
    * await instance.render('#container');
    * ```
    */
@@ -135,12 +140,6 @@ export const ForgeFrame = {
    * @returns The xprops object if in host context, undefined otherwise
    */
   getXProps,
-
-  /**
-   * Prop type constants for defining component props.
-   * @see {@link PROP_TYPE}
-   */
-  PROP_TYPE,
 
   /**
    * Serialization strategy constants.
@@ -187,6 +186,30 @@ export const ForgeFrame = {
    * ```
    */
   isStandardSchema,
+
+  /**
+   * Prop schema builders for defining component props.
+   *
+   * @remarks
+   * Provides a fluent, Zod-like API for defining prop schemas with built-in
+   * validation. All schemas implement StandardSchemaV1.
+   *
+   * @example
+   * ```typescript
+   * import ForgeFrame from 'forgeframe';
+   *
+   * const Component = ForgeFrame.create({
+   *   tag: 'my-component',
+   *   url: '/component',
+   *   props: {
+   *     name: ForgeFrame.prop.string(),
+   *     count: ForgeFrame.prop.number().default(0),
+   *     onSubmit: ForgeFrame.prop.function().optional(),
+   *   },
+   * });
+   * ```
+   */
+  prop,
 } as const;
 
 /**
@@ -206,7 +229,6 @@ export {
 } from './core';
 
 export {
-  PROP_TYPE,
   PROP_SERIALIZATION,
   CONTEXT,
   EVENT,
@@ -217,6 +239,23 @@ export { PopupOpenError } from './render/popup';
 
 // Schema utilities
 export { isStandardSchema } from './props/schema';
+
+// Prop schema builders
+export {
+  prop,
+  PropSchema,
+  StringSchema,
+  NumberSchema,
+  BooleanSchema,
+  FunctionSchema,
+  ArraySchema,
+  ObjectSchema,
+  LiteralSchema,
+  EnumSchema,
+  AnySchema,
+  type Prop,
+  type InferObjectShape,
+} from './props/prop';
 
 // Type exports
 export type {
@@ -255,7 +294,6 @@ export type {
 } from './types';
 
 export type {
-  PropType,
   ContextType,
   EventType,
   SerializationType,

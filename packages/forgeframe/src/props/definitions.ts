@@ -9,7 +9,7 @@
  */
 
 import type { PropDefinition, Dimensions } from '../types';
-import { PROP_TYPE } from '../constants';
+import { prop } from './prop';
 
 /**
  * Built-in props that are automatically provided to all components.
@@ -81,128 +81,84 @@ export interface BuiltinProps {
  */
 export const BUILTIN_PROP_DEFINITIONS: Record<string, PropDefinition> = {
   uid: {
-    type: PROP_TYPE.STRING,
-    required: false,
+    schema: prop.string().optional(),
     sendToHost: true,
   },
 
   tag: {
-    type: PROP_TYPE.STRING,
-    required: false,
+    schema: prop.string().optional(),
     sendToHost: true,
   },
 
   dimensions: {
-    type: PROP_TYPE.OBJECT,
-    required: false,
+    schema: prop.object<Dimensions>().default(() => ({ width: '100%', height: '100%' })),
     sendToHost: false,
-    default: () => ({ width: '100%', height: '100%' }),
   },
 
   timeout: {
-    type: PROP_TYPE.NUMBER,
-    required: false,
+    schema: prop.number().default(10000),
     sendToHost: false,
-    default: () => 10000,
   },
 
   cspNonce: {
-    type: PROP_TYPE.STRING,
-    required: false,
+    schema: prop.string().optional(),
     sendToHost: true,
   },
 
-  // Lifecycle callbacks - functions sent to host
+  // Lifecycle callbacks - not sent to host (consumer-only)
   onDisplay: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onRendered: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onRender: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onPrerendered: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onPrerender: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onClose: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onDestroy: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onResize: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onFocus: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onError: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 
   onProps: {
-    type: PROP_TYPE.FUNCTION,
-    required: false,
+    schema: prop.function().optional(),
     sendToHost: false,
   },
 };
 
-/**
- * Gets the default value for a prop type.
- *
- * @param type - The prop type string
- * @returns The default value for that type
- *
- * @public
- */
-export function getDefaultForType(type: string): unknown {
-  switch (type) {
-    case PROP_TYPE.STRING:
-      return '';
-    case PROP_TYPE.NUMBER:
-      return 0;
-    case PROP_TYPE.BOOLEAN:
-      return false;
-    case PROP_TYPE.ARRAY:
-      return [];
-    case PROP_TYPE.OBJECT:
-      return {};
-    case PROP_TYPE.FUNCTION:
-      return undefined;
-    default:
-      return undefined;
-  }
-}

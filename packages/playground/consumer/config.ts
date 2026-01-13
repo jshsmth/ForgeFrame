@@ -27,11 +27,11 @@ export const DEFAULT_CONFIG: PlaygroundConfig = {
   },
   props: {
     name: {
-      type: 'STRING',
+      type: 'string',
       required: true,
     },
     count: {
-      type: 'NUMBER',
+      type: 'number',
       default: 0,
     },
   },

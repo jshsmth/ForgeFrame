@@ -11,6 +11,25 @@ declare const Prism: {
   highlightElement: (element: Element) => void;
 };
 
+/**
+ * Generates prop schema code for the new prop.* API
+ */
+function generatePropSchemaCode(type: string, options: { required?: boolean; default?: unknown }): string {
+  const { required, default: defaultValue } = options;
+
+  let code = `prop.${(type || 'string').toLowerCase()}()`;
+
+  if (defaultValue !== undefined) {
+    code += `.default(${JSON.stringify(defaultValue)})`;
+  }
+
+  if (!required && defaultValue === undefined) {
+    code += '.optional()';
+  }
+
+  return code;
+}
+
 export function generateCode(
   config: PlaygroundConfig,
   context: RenderContext,
@@ -19,12 +38,11 @@ export function generateCode(
   const propsEntries = Object.entries(config.props || {})
     .map(([key, val]) => {
       const v = val as Record<string, unknown>;
-      const parts = [`type: ForgeFrame.PROP_TYPE.${v.type || 'STRING'}`];
-      if (v.required) parts.push('required: true');
-      if (v.default !== undefined) {
-        parts.push(`default: ${JSON.stringify(v.default)}`);
-      }
-      return `    ${key}: { ${parts.join(', ')} }`;
+      const schemaCode = generatePropSchemaCode(v.type as string, {
+        required: v.required as boolean,
+        default: v.default,
+      });
+      return `    ${key}: ${schemaCode}`;
     })
     .join(',\n');
 
@@ -52,7 +70,7 @@ export function generateCode(
     const modalWidth = ms.width || 500;
     const modalHeight = ms.height || 400;
 
-    return `import ForgeFrame from 'forgeframe';
+    return `import ForgeFrame, { prop } from 'forgeframe';
 
 // Define your modal component
 const MyComponent = ForgeFrame.create({
@@ -138,7 +156,7 @@ await instance.render(document.body, 'iframe');`;
     ? `  dimensions: { width: ${JSON.stringify(config.dimensions.width)}, height: ${JSON.stringify(config.dimensions.height)} },`
     : '';
 
-  return `import ForgeFrame from 'forgeframe';
+  return `import ForgeFrame, { prop } from 'forgeframe';
 
 // Define your component
 const MyComponent = ForgeFrame.create({
