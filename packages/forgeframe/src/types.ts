@@ -857,37 +857,17 @@ export interface GetSiblingsOptions {
 // ============================================================================
 
 /**
- * Props object available in host window via `window.xprops`.
+ * Built-in properties and methods available on xprops.
  *
  * @typeParam P - The props type for the component
  *
  * @remarks
- * The xprops object contains all props passed from the consumer, plus
- * built-in methods for controlling the component and communicating
- * with the consumer.
- *
- * @example
- * ```typescript
- * // In host window
- * const { name, onSubmit, close, resize } = window.xprops;
- *
- * // Use passed props
- * console.log(name);
- *
- * // Call consumer callbacks
- * await onSubmit({ success: true });
- *
- * // Control the frame
- * await resize({ width: 500, height: 400 });
- * await close();
- * ```
+ * These are the framework-provided properties that are always available
+ * on the xprops object, regardless of user-defined props.
  *
  * @public
  */
-export interface HostProps<P = Record<string, unknown>> {
-  /** User-defined props passed from consumer */
-  [K: string]: unknown;
-
+export interface HostPropsBuiltins<P = Record<string, unknown>> {
   /** Unique instance ID */
   uid: string;
 
@@ -986,6 +966,42 @@ export interface HostProps<P = Record<string, unknown>> {
    */
   children?: Record<string, ForgeFrameComponent>;
 }
+
+/**
+ * Props object available in host window via `window.xprops`.
+ *
+ * @typeParam P - The props type for the component
+ *
+ * @remarks
+ * The xprops object contains all props passed from the consumer, plus
+ * built-in methods for controlling the component and communicating
+ * with the consumer. User-defined props from P are properly typed,
+ * and built-in methods are always available.
+ *
+ * @example
+ * ```typescript
+ * // In host window with typed props
+ * interface MyProps {
+ *   name: string;
+ *   onSubmit: (data: { success: boolean }) => void;
+ * }
+ *
+ * const xprops = window.xprops as HostProps<MyProps>;
+ *
+ * // User props are properly typed
+ * console.log(xprops.name); // string
+ *
+ * // Call consumer callbacks
+ * await xprops.onSubmit({ success: true });
+ *
+ * // Built-in methods are always available
+ * await xprops.resize({ width: 500, height: 400 });
+ * await xprops.close();
+ * ```
+ *
+ * @public
+ */
+export type HostProps<P = Record<string, unknown>> = P & HostPropsBuiltins<P>;
 
 // ============================================================================
 // Communication Types

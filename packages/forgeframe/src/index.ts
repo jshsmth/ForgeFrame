@@ -264,6 +264,7 @@ export type {
   ForgeFrameComponent,
   ForgeFrameComponentInstance,
   HostProps,
+  HostPropsBuiltins,
 
   // Props types
   PropDefinition,
