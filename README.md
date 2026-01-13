@@ -62,7 +62,7 @@ Imagine a payment company (like Stripe) wants to let merchants embed a checkout 
   - [3. Render the Component](#3-render-the-component)
   - [4. Handle Events](#4-handle-events)
 - [Props System](#props-system)
-- [Host Window API (xprops)](#host-window-api-xprops)
+- [Host Window API (hostProps)](#host-window-api-hostprops)
 - [Templates](#templates)
 - [React Integration](#react-integration)
 - [Advanced Features](#advanced-features)

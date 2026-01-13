@@ -720,7 +720,7 @@ export interface ForgeFrameComponentInstance<P = Record<string, unknown>, X = un
   state: Record<string, unknown>;
 
   /**
-   * Data exported from the host component via `xprops.export()`.
+   * Data exported from the host component via `hostProps.export()`.
    */
   exports?: X;
 }
@@ -748,7 +748,7 @@ export interface ForgeFrameComponentInstance<P = Record<string, unknown>, X = un
  *
  * // Check if we're in a host context
  * if (MyComponent.isHost()) {
- *   const props = MyComponent.xprops;
+ *   const props = MyComponent.hostProps;
  * }
  * ```
  *
@@ -812,7 +812,7 @@ export interface ForgeFrameComponent<P = Record<string, unknown>, X = unknown> {
 // ============================================================================
 
 /**
- * Consumer namespace available in host via `xprops.consumer`.
+ * Consumer namespace available in host via `hostProps.consumer`.
  *
  * @typeParam P - The props type for the component
  *
@@ -878,13 +878,13 @@ export type GetSiblingsOptions = GetPeerInstancesOptions;
 // ============================================================================
 
 /**
- * Built-in properties and methods available on xprops.
+ * Built-in properties and methods available on hostProps.
  *
  * @typeParam P - The props type for the component
  *
  * @remarks
  * These are the framework-provided properties that are always available
- * on the xprops object, regardless of user-defined props.
+ * on the hostProps object, regardless of user-defined props.
  *
  * @public
  */

@@ -128,13 +128,13 @@ export interface ReactDriverOptions {
 }
 
 /**
- * Type definition for a React component created by the driver.
+ * Type definition for a React component created by the integration.
  *
  * @typeParam P - The props type for the component
  *
  * @remarks
  * This interface represents the callable component function returned by
- * {@link createReactDriver}. It includes an optional `displayName` for
+ * {@link createReactComponent}. It includes an optional `displayName` for
  * React DevTools integration.
  *
  * @public

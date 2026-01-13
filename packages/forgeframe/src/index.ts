@@ -59,7 +59,7 @@ import { isStandardSchema } from './props/schema';
 import { prop } from './props/prop';
 
 // Auto-initialize host if in a ForgeFrame window.
-// This makes window.xprops available automatically in host contexts.
+// This makes window.hostProps available automatically in host contexts.
 initHost();
 
 /**
