@@ -1,6 +1,6 @@
 # ForgeFrame
 
-A TypeScript-first framework for embedding cross-domain iframes and popups with seamless communication. Pass data and callbacks across domains — perfect for payment forms, auth widgets, third-party integrations, and micro-frontends. Zero dependencies, ~15KB gzipped.
+A TypeScript-first framework for embedding cross-domain iframes and popups with seamless communication. Pass data and callbacks across domains — perfect for payment forms, auth widgets, third-party integrations, and micro-frontends. Zero dependencies, ~21KB gzipped (ESM) / ~12KB gzipped (UMD).
 
 ### Terminology
 
