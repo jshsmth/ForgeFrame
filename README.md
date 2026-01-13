@@ -8,7 +8,7 @@ ForgeFrame involves two sides:
 
 **Consumer** — The outer app that renders the iframe and passes props into it
 
-**Host** — The inner app running inside the iframe that receives props via `window.xprops`
+**Host** — The inner app running inside the iframe that receives props via `window.hostProps`
 
 #### Real-world example
 
@@ -33,7 +33,7 @@ Imagine a payment company (like Stripe) wants to let merchants embed a checkout 
 │      │  Host (payment form - stripe.com)            │           │
 │      │                                              │           │
 │      │  const { amount, onSuccess, close }          │           │
-│      │    = window.xprops;                          │           │
+│      │    = window.hostProps;                       │           │
 │      │                                              │           │
 │      │  // User enters card, pays...                │           │
 │      │  onSuccess({ paymentId: 'xyz', amount });    │           │
@@ -117,11 +117,11 @@ interface PaymentProps {
 
 declare global {
   interface Window {
-    xprops: HostProps<PaymentProps>;
+    hostProps: HostProps<PaymentProps>;
   }
 }
 
-const { amount, onSuccess, close } = window.xprops;
+const { amount, onSuccess, close } = window.hostProps;
 
 document.getElementById('total')!.textContent = `$${amount}`;
 document.getElementById('pay-btn')!.onclick = async () => {
@@ -177,7 +177,7 @@ const LoginForm = ForgeFrame.create<LoginProps>({
 
 > **`Host`**
 
-The host page runs inside the iframe at the URL you specified. It receives props via `window.xprops`.
+The host page runs inside the iframe at the URL you specified. It receives props via `window.hostProps`.
 
 ```typescript
 import { type HostProps } from 'forgeframe';
@@ -190,11 +190,11 @@ interface LoginProps {
 
 declare global {
   interface Window {
-    xprops: HostProps<LoginProps>;
+    hostProps: HostProps<LoginProps>;
   }
 }
 
-const { email, onLogin, onCancel, close } = window.xprops;
+const { email, onLogin, onCancel, close } = window.hostProps;
 
 if (email) document.getElementById('email')!.value = email;
 
@@ -218,7 +218,7 @@ document.getElementById('cancel')!.onclick = async () => {
 <summary>Explanation</summary>
 
 - **`HostProps<LoginProps>`**: Combines your props with built-in methods (`close`, `resize`, etc.)
-- **`window.xprops`**: Automatically available in ForgeFrame hosts, contains all props passed from the consumer
+- **`window.hostProps`**: Automatically available in ForgeFrame hosts, contains all props passed from the consumer
 - **`close()`**: Built-in method to close the iframe/popup
 
 </details>
@@ -390,16 +390,16 @@ await instance.updateProps({ name: 'Updated' });
 The host receives updates via `onProps`:
 
 ```typescript
-window.xprops.onProps((newProps) => {
+window.hostProps.onProps((newProps) => {
   console.log('Props updated:', newProps);
 });
 ```
 
 ---
 
-## Host Window API (xprops)
+## Host Window API (hostProps)
 
-In host windows, `window.xprops` provides access to props and control methods.
+In host windows, `window.hostProps` provides access to props and control methods.
 
 ### TypeScript Setup
 
@@ -413,39 +413,39 @@ interface MyProps {
 
 declare global {
   interface Window {
-    xprops?: HostProps<MyProps>;
+    hostProps?: HostProps<MyProps>;
   }
 }
 
-const { email, onLogin, close, resize } = window.xprops!;
+const { email, onLogin, close, resize } = window.hostProps!;
 ```
 
 ### Available Methods
 
 ```typescript
-const xprops = window.xprops;
+const props = window.hostProps;
 
-xprops.email;
-xprops.onLogin(user);
-xprops.uid;
-xprops.tag;
+props.email;
+props.onLogin(user);
+props.uid;
+props.tag;
 
-await xprops.close();
-await xprops.focus();
-await xprops.resize({ width: 500, height: 400 });
-await xprops.show();
-await xprops.hide();
+await props.close();
+await props.focus();
+await props.resize({ width: 500, height: 400 });
+await props.show();
+await props.hide();
 
-xprops.onProps((props) => { /* handle updates */ });
-xprops.onError(new Error('Something failed'));
-await xprops.export({ validate: () => true });
+props.onProps((newProps) => { /* handle updates */ });
+props.onError(new Error('Something failed'));
+await props.export({ validate: () => true });
 
-xprops.getConsumer();
-xprops.getConsumerDomain();
-xprops.consumer.props;
-xprops.consumer.export(data);
+props.getConsumer();
+props.getConsumerDomain();
+props.consumer.props;
+props.consumer.export(data);
 
-const siblings = await xprops.getSiblings();
+const peers = await props.getPeerInstances();
 ```
 
 <details>
@@ -465,7 +465,7 @@ const siblings = await xprops.getSiblings();
 | `getConsumer()` | Get consumer window reference |
 | `getConsumerDomain()` | Get consumer origin |
 | `consumer.props` | Access consumer's props |
-| `getSiblings()` | Get sibling component instances |
+| `getPeerInstances()` | Get peer component instances from the same consumer |
 
 </details>
 
@@ -476,7 +476,7 @@ Host components can export methods/data for the consumer to use.
 > **`Host`**
 
 ```typescript
-window.xprops.export({
+window.hostProps.export({
   validate: () => document.getElementById('form').checkValidity(),
   getFormData: () => ({ email: document.getElementById('email').value }),
 });
@@ -574,7 +574,7 @@ const MyComponent = ForgeFrame.create({
 
 ```tsx
 import React from 'react';
-import ForgeFrame, { prop, createReactDriver } from 'forgeframe';
+import ForgeFrame, { prop, createReactComponent } from 'forgeframe';
 
 const LoginComponent = ForgeFrame.create({
   tag: 'login',
@@ -586,7 +586,7 @@ const LoginComponent = ForgeFrame.create({
   },
 });
 
-const Login = createReactDriver(LoginComponent, { React });
+const Login = createReactComponent(LoginComponent, { React });
 
 function App() {
   const [user, setUser] = useState(null);
@@ -623,16 +623,16 @@ The React component accepts all your component props plus:
 
 ### Factory Pattern
 
-For multiple components, use `withReactDriver`:
+For multiple components, use `withReactComponent`:
 
 ```tsx
-import { withReactDriver } from 'forgeframe';
+import { withReactComponent } from 'forgeframe';
 
-const createDriver = withReactDriver(React);
+const createComponent = withReactComponent(React);
 
-const LoginReact = createDriver(LoginComponent);
-const PaymentReact = createDriver(PaymentComponent);
-const ProfileReact = createDriver(ProfileComponent);
+const LoginReact = createComponent(LoginComponent);
+const PaymentReact = createComponent(PaymentComponent);
+const ProfileReact = createComponent(ProfileComponent);
 ```
 
 ---
@@ -721,7 +721,7 @@ const ContainerComponent = ForgeFrame.create({
 > **`Host`**
 
 ```typescript
-const { children } = window.xprops;
+const { children } = window.hostProps;
 children.CardField({ onValid: () => {} }).render('#card-container');
 ```
 
@@ -736,10 +736,11 @@ import ForgeFrame, { prop } from 'forgeframe';
 
 ForgeFrame.create(options)        // Create a component
 ForgeFrame.destroy(instance)      // Destroy an instance
-ForgeFrame.destroyComponents(tag) // Destroy all instances of a tag
+ForgeFrame.destroyByTag(tag)      // Destroy all instances of a tag
 ForgeFrame.destroyAll()           // Destroy all instances
 ForgeFrame.isHost()               // Check if in host context
-ForgeFrame.getXProps()            // Get xprops in host
+ForgeFrame.isEmbedded()           // Alias for isHost() - more intuitive naming
+ForgeFrame.getHostProps()         // Get hostProps in host context
 ForgeFrame.isStandardSchema(val)  // Check if value is a Standard Schema
 
 ForgeFrame.prop                   // Prop schema builders (also exported as `prop`)
@@ -809,6 +810,8 @@ import ForgeFrame, {
   FunctionSchema,
   ArraySchema,
   ObjectSchema,
+  createReactComponent,
+  withReactComponent,
   type ComponentOptions,
   type ForgeFrameComponent,
   type ForgeFrameComponentInstance,
@@ -817,10 +820,11 @@ import ForgeFrame, {
   type TemplateContext,
   type Dimensions,
   type EventHandler,
+  type GetPeerInstancesOptions,
 } from 'forgeframe';
 ```
 
-### Typing Host xprops
+### Typing Host hostProps
 
 ```typescript
 import { type HostProps } from 'forgeframe';
@@ -832,14 +836,14 @@ interface MyProps {
 
 declare global {
   interface Window {
-    xprops?: HostProps<MyProps>;
+    hostProps?: HostProps<MyProps>;
   }
 }
 
-window.xprops!.name;
-window.xprops!.onSubmit;
-window.xprops!.close;
-window.xprops!.resize;
+window.hostProps!.name;
+window.hostProps!.onSubmit;
+window.hostProps!.close;
+window.hostProps!.resize;
 ```
 
 ---

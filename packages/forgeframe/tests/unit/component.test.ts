@@ -4,11 +4,11 @@ import {
   clearComponents,
   getComponent,
   destroy,
-  destroyComponents,
+  destroyByTag,
   destroyAll,
   unregisterComponent,
 } from '@/core/component';
-import { isHost, getXProps } from '@/core/host';
+import { isHost, getHostProps } from '@/core/host';
 import { CONTEXT } from '@/constants';
 import { prop } from '@/props/prop';
 
@@ -289,7 +289,7 @@ describe('Component Destruction', () => {
     });
   });
 
-  describe('destroyComponents', () => {
+  describe('destroyByTag', () => {
     it('should call close on all instances of a specific component', async () => {
       const MyComponent = create({
         tag: 'destroy-all-of-type',
@@ -306,7 +306,7 @@ describe('Component Destruction', () => {
 
       expect(MyComponent.instances.length).toBe(3);
 
-      await destroyComponents('destroy-all-of-type');
+      await destroyByTag('destroy-all-of-type');
 
       expect(spy1).toHaveBeenCalled();
       expect(spy2).toHaveBeenCalled();
@@ -332,7 +332,7 @@ describe('Component Destruction', () => {
       const spyA2 = vi.spyOn(instanceA2, 'close');
       const spyB = vi.spyOn(instanceB, 'close');
 
-      await destroyComponents('component-a');
+      await destroyByTag('component-a');
 
       expect(spyA1).toHaveBeenCalled();
       expect(spyA2).toHaveBeenCalled();
@@ -340,7 +340,7 @@ describe('Component Destruction', () => {
     });
 
     it('should not throw for non-existent component tag', async () => {
-      await expect(destroyComponents('non-existent')).resolves.toBeUndefined();
+      await expect(destroyByTag('non-existent')).resolves.toBeUndefined();
     });
   });
 
@@ -392,15 +392,15 @@ describe('Host Context Detection', () => {
     });
   });
 
-  describe('getXProps', () => {
+  describe('getHostProps', () => {
     it('should return undefined when not in a host context', () => {
-      const xprops = getXProps();
-      expect(xprops).toBeUndefined();
+      const props = getHostProps();
+      expect(props).toBeUndefined();
     });
 
-    it('should return xprops from window when available', () => {
-      // Temporarily set xprops on window
-      const mockXProps = {
+    it('should return hostProps from window when available', () => {
+      // Temporarily set hostProps on window
+      const mockHostProps = {
         uid: 'test-uid',
         tag: 'test-tag',
         testProp: 'value',
@@ -415,16 +415,16 @@ describe('Host Context Detection', () => {
         getConsumerDomain: vi.fn(),
         export: vi.fn(),
         consumer: { props: {}, export: vi.fn() },
-        getSiblings: vi.fn(),
+        getPeerInstances: vi.fn(),
       };
 
-      (window as unknown as { xprops: typeof mockXProps }).xprops = mockXProps;
+      (window as unknown as { hostProps: typeof mockHostProps }).hostProps = mockHostProps;
 
-      const xprops = getXProps();
-      expect(xprops).toBe(mockXProps);
+      const props = getHostProps();
+      expect(props).toBe(mockHostProps);
 
       // Cleanup
-      delete (window as unknown as { xprops?: typeof mockXProps }).xprops;
+      delete (window as unknown as { hostProps?: typeof mockHostProps }).hostProps;
     });
   });
 

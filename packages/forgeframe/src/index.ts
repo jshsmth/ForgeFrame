@@ -34,10 +34,11 @@
 import {
   create,
   destroy,
-  destroyComponents,
+  destroyByTag,
   destroyAll,
   isHost,
-  getXProps,
+  isEmbedded,
+  getHostProps,
   initHost,
 } from './core';
 
@@ -120,7 +121,7 @@ export const ForgeFrame = {
    *
    * @param tag - The component tag name
    */
-  destroyComponents,
+  destroyByTag,
 
   /**
    * Destroy all ForgeFrame component instances.
@@ -130,16 +131,33 @@ export const ForgeFrame = {
   /**
    * Check if the current window is a host component context.
    *
+   * @remarks
+   * A "host" is the embedded iframe or popup window that receives props
+   * from the consumer (the embedding app).
+   *
    * @returns True if running inside a ForgeFrame iframe/popup
    */
   isHost,
 
   /**
-   * Get xprops from the current host window.
+   * Check if the current window is embedded by ForgeFrame.
    *
-   * @returns The xprops object if in host context, undefined otherwise
+   * @remarks
+   * This is an alias for {@link isHost} that uses more intuitive terminology.
+   *
+   * @returns True if running inside a ForgeFrame iframe/popup
    */
-  getXProps,
+  isEmbedded,
+
+  /**
+   * Get hostProps from the current host window.
+   *
+   * @remarks
+   * Returns the props passed from the consumer plus built-in control methods.
+   *
+   * @returns The hostProps object if in host context, undefined otherwise
+   */
+  getHostProps,
 
   /**
    * Serialization strategy constants.
@@ -222,10 +240,11 @@ export default ForgeFrame;
 export {
   create,
   destroy,
-  destroyComponents,
+  destroyByTag,
   destroyAll,
   isHost,
-  getXProps,
+  isEmbedded,
+  getHostProps,
 } from './core';
 
 export {
@@ -288,6 +307,8 @@ export type {
   IframeAttributes,
   IframeStyles,
   EligibilityResult,
+  SiblingInfo,
+  GetPeerInstancesOptions,
 
   // Event types
   EventHandler,
@@ -300,10 +321,10 @@ export type {
   SerializationType,
 } from './constants';
 
-// React driver exports
+// React integration exports
 export {
-  createReactDriver,
-  withReactDriver,
+  createReactComponent,
+  withReactComponent,
   type ReactDriverOptions,
   type ReactComponentProps,
   type ReactComponentType,

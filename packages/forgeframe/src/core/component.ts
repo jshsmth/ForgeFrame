@@ -103,11 +103,11 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
 
   const instances: ForgeFrameComponentInstance<P, X>[] = [];
 
-  let hostXProps: HostProps<P> | undefined;
+  let componentHostProps: HostProps<P> | undefined;
   if (isHostOfComponent(options.tag)) {
     const host = initHost<P>(options.props);
     if (host) {
-      hostXProps = host.xprops;
+      componentHostProps = host.hostProps;
     }
   }
 
@@ -137,7 +137,11 @@ export function create<P extends Record<string, unknown> = Record<string, unknow
     return isHostOfComponent(options.tag);
   };
 
-  Component.xprops = hostXProps;
+  Component.isEmbedded = (): boolean => {
+    return isHostOfComponent(options.tag);
+  };
+
+  Component.hostProps = componentHostProps;
 
   Component.canRenderTo = async (win: Window): Promise<boolean> => {
     try {
@@ -213,22 +217,23 @@ export async function destroy<P extends Record<string, unknown>>(
 }
 
 /**
- * Destroys all instances of a specific component.
+ * Destroys all instances of a specific component by its tag name.
  *
  * @remarks
  * Useful for cleanup when a component type is no longer needed.
+ * This destroys all active instances of the component with the given tag.
  *
  * @param tag - The component tag name to destroy all instances of
  *
  * @example
  * ```typescript
  * // Destroy all login component instances
- * await destroyComponents('login-component');
+ * await destroyByTag('login-component');
  * ```
  *
  * @public
  */
-export async function destroyComponents(tag: string): Promise<void> {
+export async function destroyByTag(tag: string): Promise<void> {
   const component = componentRegistry.get(tag);
   if (!component) return;
 
@@ -255,7 +260,7 @@ export async function destroyComponents(tag: string): Promise<void> {
  */
 export async function destroyAll(): Promise<void> {
   const tags = Array.from(componentRegistry.keys());
-  await Promise.all(tags.map((tag) => destroyComponents(tag)));
+  await Promise.all(tags.map((tag) => destroyByTag(tag)));
 }
 
 /**
@@ -282,5 +287,3 @@ export function unregisterComponent(tag: string): void {
 export function clearComponents(): void {
   componentRegistry.clear();
 }
-
-export { isHost, getXProps } from './host';
