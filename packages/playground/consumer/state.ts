@@ -53,3 +53,20 @@ export function setPropValue(key: string, value: unknown) {
 export function deletePropValue(key: string) {
   delete currentPropValues[key];
 }
+
+export function addPropToConfig(name: string, type: string, defaultValue?: unknown) {
+  if (!currentConfig.props) {
+    currentConfig.props = {};
+  }
+  currentConfig.props[name] = {
+    type,
+    ...(defaultValue !== undefined ? { default: defaultValue } : {}),
+  };
+}
+
+export function removePropFromConfig(name: string) {
+  if (currentConfig.props) {
+    delete currentConfig.props[name];
+  }
+  deletePropValue(name);
+}

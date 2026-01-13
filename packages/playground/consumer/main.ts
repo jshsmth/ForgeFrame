@@ -5,7 +5,7 @@
  */
 import { elements } from './elements';
 import { log, clearLog } from './logger';
-import { renderPropsBar } from './props-bar';
+import { renderPropsBar, setOnConfigChange } from './props-bar';
 import { updateCodePreview } from './code-generator';
 import { renderComponent } from './renderer';
 import { DEFAULT_CONFIG } from './config';
@@ -18,6 +18,14 @@ import {
   setCurrentIframeStyle,
 } from './state';
 import type { RenderContext, IframeStyle } from './types';
+
+// Callback when props config changes (add/remove prop)
+function handleConfigChange() {
+  renderPropsBar(currentConfig);
+  updateCodePreview(currentConfig, currentContext, currentIframeStyle);
+}
+
+setOnConfigChange(handleConfigChange);
 
 // ============================================================================
 // Mode Toggle
