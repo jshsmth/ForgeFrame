@@ -1,15 +1,54 @@
 # ForgeFrame
 
-A modern, TypeScript-first cross-domain component framework for embedding iframes and popups with seamless communication. Zero dependencies, ~15KB gzipped.
+A TypeScript-first framework for embedding cross-domain iframes and popups with seamless communication. Pass data and callbacks across domains — perfect for payment forms, auth widgets, third-party integrations, and micro-frontends. Zero dependencies, ~15KB gzipped.
 
-## Why ForgeFrame?
+### Terminology
 
-ForgeFrame lets you embed components from different domains while passing data and callbacks seamlessly - something iframes alone can't do elegantly. Perfect for:
+ForgeFrame involves two sides:
 
-- **Payment forms** - Embed secure payment fields from a payment provider
-- **Authentication widgets** - Login forms hosted on your auth domain
-- **Third-party integrations** - Embed partner components in your app
-- **Micro-frontends** - Isolated components across different teams/domains
+**Consumer** — The outer app that renders the iframe and passes props into it
+
+**Host** — The inner app running inside the iframe that receives props via `window.xprops`
+
+#### Real-world example
+
+Imagine a payment company (like Stripe) wants to let merchants embed a checkout form:
+
+| | Consumer | Host |
+|--|----------|------|
+| **Who builds it** | Merchant (e.g., `shop.com`) | Payment company (e.g., `stripe.com`) |
+| **What they do** | Embeds the checkout, receives `onSuccess` | Provides the checkout UI, calls `onSuccess` when paid |
+| **Their domain** | `shop.com` | `stripe.com` |
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Consumer (merchant's site - shop.com)                          │
+│                                                                 │
+│  Checkout({ amount: 99, onSuccess: (payment) => {               │
+│    // Payment complete! Fulfill the order                       │
+│  }}).render('#checkout-container');                             │
+│                         │                                       │
+│                         ▼                                       │
+│      ┌──────────────────────────────────────────────┐           │
+│      │  Host (payment form - stripe.com)            │           │
+│      │                                              │           │
+│      │  const { amount, onSuccess, close }          │           │
+│      │    = window.xprops;                          │           │
+│      │                                              │           │
+│      │  // User enters card, pays...                │           │
+│      │  onSuccess({ paymentId: 'xyz', amount });    │           │
+│      │  close();                                    │           │
+│      └──────────────────────────────────────────────┘           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Which side are you building?
+
+| If you want to... | You're building the... |
+|-------------------|------------------------|
+| Embed someone else's component into your app | **Consumer** |
+| Build a component/widget for others to embed | **Host** |
+| Build both sides (e.g., your own micro-frontends) | **Both** |
 
 ---
 
@@ -18,7 +57,7 @@ ForgeFrame lets you embed components from different domains while passing data a
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Step-by-Step Guide](#step-by-step-guide)
-  - [1. Define a Component](#1-define-a-component-consumer)
+  - [1. Define a Component](#1-define-a-component)
   - [2. Create the Host Page](#2-create-the-host-page)
   - [3. Render the Component](#3-render-the-component)
   - [4. Handle Events](#4-handle-events)
@@ -43,7 +82,7 @@ npm install forgeframe
 
 ## Quick Start
 
-### Consumer Page (your app)
+> **`Consumer`**
 
 ```typescript
 import ForgeFrame, { prop } from 'forgeframe';
@@ -66,13 +105,26 @@ const payment = PaymentForm({
 await payment.render('#payment-container');
 ```
 
-### Host Page (embedded iframe)
+> **`Host`**
 
 ```typescript
+import { type HostProps } from 'forgeframe';
+
+interface PaymentProps {
+  amount: number;
+  onSuccess: (txn: { transactionId: string }) => void;
+}
+
+declare global {
+  interface Window {
+    xprops: HostProps<PaymentProps>;
+  }
+}
+
 const { amount, onSuccess, close } = window.xprops;
 
-document.getElementById('total').textContent = `$${amount}`;
-document.getElementById('pay-btn').onclick = async () => {
+document.getElementById('total')!.textContent = `$${amount}`;
+document.getElementById('pay-btn')!.onclick = async () => {
   await onSuccess({ transactionId: 'TXN_123' });
   await close();
 };
@@ -84,7 +136,9 @@ That's it! ForgeFrame handles all the cross-domain communication automatically.
 
 ## Step-by-Step Guide
 
-### 1. Define a Component (Consumer)
+### 1. Define a Component
+
+> **`Consumer`**
 
 Components are defined using `ForgeFrame.create()`. This creates a reusable component factory.
 
@@ -121,59 +175,59 @@ const LoginForm = ForgeFrame.create<LoginProps>({
 
 ### 2. Create the Host Page
 
-The host page runs inside the iframe. It receives props via `window.xprops`.
+> **`Host`**
 
-```html
-<!-- https://auth.example.com/login -->
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Login</title>
-</head>
-<body>
-  <form id="login-form">
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button type="submit">Login</button>
-    <button type="button" id="cancel">Cancel</button>
-  </form>
+The host page runs inside the iframe at the URL you specified. It receives props via `window.xprops`.
 
-  <script type="module">
-    const { email, onLogin, onCancel, close } = window.xprops;
+```typescript
+import { type HostProps } from 'forgeframe';
 
-    if (email) document.getElementById('email').value = email;
+interface LoginProps {
+  email?: string;
+  onLogin: (user: { id: number; name: string }) => void;
+  onCancel?: () => void;
+}
 
-    document.getElementById('login-form').onsubmit = async (e) => {
-      e.preventDefault();
-      await onLogin({
-        id: 1,
-        name: 'John Doe',
-        email: document.getElementById('email').value,
-      });
-      await close();
-    };
+declare global {
+  interface Window {
+    xprops: HostProps<LoginProps>;
+  }
+}
 
-    document.getElementById('cancel').onclick = async () => {
-      await onCancel?.();
-      await close();
-    };
-  </script>
-</body>
-</html>
+const { email, onLogin, onCancel, close } = window.xprops;
+
+if (email) document.getElementById('email')!.value = email;
+
+document.getElementById('login-form')!.onsubmit = async (e) => {
+  e.preventDefault();
+  await onLogin({
+    id: 1,
+    name: 'John Doe',
+    email: document.getElementById('email')!.value,
+  });
+  await close();
+};
+
+document.getElementById('cancel')!.onclick = async () => {
+  await onCancel?.();
+  await close();
+};
 ```
 
 <details>
 <summary>Explanation</summary>
 
+- **`HostProps<LoginProps>`**: Combines your props with built-in methods (`close`, `resize`, etc.)
 - **`window.xprops`**: Automatically available in ForgeFrame hosts, contains all props passed from the consumer
-- **`onLogin`**: Call consumer callbacks to send data back across the domain boundary
 - **`close()`**: Built-in method to close the iframe/popup
 
 </details>
 
 ### 3. Render the Component
 
-Create an instance with props and render it.
+> **`Consumer`**
+
+Back in your consumer app, create an instance with props and render it.
 
 ```typescript
 const login = LoginForm({
@@ -186,6 +240,8 @@ await login.render('#login-container');
 ```
 
 ### 4. Handle Events
+
+> **`Consumer`**
 
 Subscribe to lifecycle events for better control.
 
@@ -417,7 +473,8 @@ const siblings = await xprops.getSiblings();
 
 Host components can export methods/data for the consumer to use.
 
-**Host:**
+> **`Host`**
+
 ```typescript
 window.xprops.export({
   validate: () => document.getElementById('form').checkValidity(),
@@ -425,7 +482,8 @@ window.xprops.export({
 });
 ```
 
-**Consumer:**
+> **`Consumer`**
+
 ```typescript
 const instance = MyComponent({ /* props */ });
 await instance.render('#container');
@@ -647,6 +705,8 @@ if (instance.isEligible()) {
 
 Define nested components that can be rendered from within the host.
 
+> **`Consumer`**
+
 ```typescript
 const ContainerComponent = ForgeFrame.create({
   tag: 'container',
@@ -658,7 +718,7 @@ const ContainerComponent = ForgeFrame.create({
 });
 ```
 
-In the container's host page:
+> **`Host`**
 
 ```typescript
 const { children } = window.xprops;
