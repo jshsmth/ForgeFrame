@@ -89,7 +89,7 @@ import ForgeFrame, { prop } from 'forgeframe';
 
 const PaymentForm = ForgeFrame.create({
   tag: 'payment-form',
-  url: 'https://payments.example.com/form',
+  url: 'https://checkout.stripe.com/payment',
   dimensions: { width: 400, height: 300 },
   props: {
     amount: prop.number(),
@@ -153,7 +153,7 @@ interface LoginProps {
 
 const LoginForm = ForgeFrame.create<LoginProps>({
   tag: 'login-form',
-  url: 'https://auth.example.com/login',
+  url: 'https://auth.stripe.com/login',
   dimensions: { width: 400, height: 350 },
   props: {
     email: prop.string().optional(),
@@ -287,7 +287,7 @@ import ForgeFrame, { prop } from 'forgeframe';
 
 const MyComponent = ForgeFrame.create({
   tag: 'my-component',
-  url: '/component',
+  url: 'https://widgets.stripe.com/component',
   props: {
     name: prop.string(),
     count: prop.number(),
@@ -368,7 +368,7 @@ import * as v from 'valibot';
 
 const MyComponent = ForgeFrame.create({
   tag: 'my-component',
-  url: '/component',
+  url: 'https://widgets.stripe.com/component',
   props: {
     email: z.string().email(),
     user: z.object({ name: z.string(), role: z.enum(['admin', 'user']) }),
@@ -503,7 +503,7 @@ Customize how the component container is rendered. Perfect for modals.
 ```typescript
 const ModalComponent = ForgeFrame.create({
   tag: 'modal',
-  url: '/modal',
+  url: 'https://widgets.stripe.com/modal',
   dimensions: { width: 500, height: 400 },
 
   containerTemplate: ({ doc, frame, prerenderFrame, close }) => {
@@ -545,7 +545,7 @@ Customize the loading state shown while the host loads.
 ```typescript
 const MyComponent = ForgeFrame.create({
   tag: 'my-component',
-  url: '/component',
+  url: 'https://widgets.stripe.com/component',
 
   prerenderTemplate: ({ doc, dimensions }) => {
     const loader = doc.createElement('div');
@@ -578,7 +578,7 @@ import ForgeFrame, { prop, createReactComponent } from 'forgeframe';
 
 const LoginComponent = ForgeFrame.create({
   tag: 'login',
-  url: 'https://auth.example.com/login',
+  url: 'https://auth.stripe.com/login',
   dimensions: { width: 400, height: 350 },
   props: {
     email: prop.string().optional(),
@@ -648,7 +648,7 @@ await instance.render('#container', 'popup');
 
 const PopupComponent = ForgeFrame.create({
   tag: 'popup-component',
-  url: '/popup',
+  url: 'https://widgets.stripe.com/popup',
   defaultContext: 'popup',
 });
 ```
@@ -660,7 +660,7 @@ Automatically resize based on host content.
 ```typescript
 const AutoResizeComponent = ForgeFrame.create({
   tag: 'auto-resize',
-  url: '/component',
+  url: 'https://widgets.stripe.com/component',
   autoResize: { height: true, width: false, element: '.content' },
 });
 ```
@@ -672,8 +672,8 @@ Restrict which domains can embed or communicate.
 ```typescript
 const SecureComponent = ForgeFrame.create({
   tag: 'secure',
-  url: 'https://secure.example.com/widget',
-  domain: 'https://secure.example.com',
+  url: 'https://secure.stripe.com/widget',
+  domain: 'https://secure.stripe.com',
   allowedConsumerDomains: [
     'https://myapp.com',
     'https://*.myapp.com',
@@ -689,7 +689,7 @@ Conditionally allow rendering.
 ```typescript
 const FeatureComponent = ForgeFrame.create({
   tag: 'feature',
-  url: '/feature',
+  url: 'https://widgets.stripe.com/feature',
   eligible: ({ props }) => {
     if (!props.userId) return { eligible: false, reason: 'User must be logged in' };
     return { eligible: true };
@@ -710,7 +710,7 @@ Define nested components that can be rendered from within the host.
 ```typescript
 const ContainerComponent = ForgeFrame.create({
   tag: 'container',
-  url: '/container',
+  url: 'https://widgets.stripe.com/container',
   children: () => ({
     CardField: CardFieldComponent,
     CVVField: CVVFieldComponent,
