@@ -1,15 +1,15 @@
 /**
- * ForgeFrame Driver Module
+ * ForgeFrame Framework Integration Module
  *
  * @remarks
- * This module provides framework-specific drivers for integrating ForgeFrame
- * components with popular UI frameworks like React. Drivers handle the lifecycle
+ * This module provides framework-specific integrations for ForgeFrame
+ * components with popular UI frameworks like React. These handle the lifecycle
  * management, prop synchronization, and rendering of cross-domain components
  * within the target framework's component model.
  *
  * @example
  * ```typescript
- * import { createReactDriver, withReactDriver } from 'forgeframe/drivers';
+ * import { createReactComponent, withReactComponent } from 'forgeframe/drivers';
  * import type { ReactDriverOptions, ReactComponentProps } from 'forgeframe/drivers';
  * ```
  *
@@ -17,8 +17,8 @@
  */
 
 export {
-  createReactDriver,
-  withReactDriver,
+  createReactComponent,
+  withReactComponent,
   type ReactDriverOptions,
   type ReactComponentProps,
   type ReactComponentType,

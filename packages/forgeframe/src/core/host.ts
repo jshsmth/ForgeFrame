@@ -5,7 +5,7 @@
  * @remarks
  * This module contains the HostComponent class which runs inside the iframe
  * or popup and handles communication with the consumer window. It also provides
- * utilities for detecting host context and accessing xprops.
+ * utilities for detecting host context and accessing hostProps.
  */
 
 import type {
@@ -15,7 +15,7 @@ import type {
   PropsDefinition,
   SerializedProps,
   SiblingInfo,
-  GetSiblingsOptions,
+  GetPeerInstancesOptions,
   ForgeFrameComponent,
   HostComponentRef,
 } from '../types';
@@ -42,7 +42,7 @@ import { create } from './component';
  *
  * @remarks
  * This class runs inside the iframe or popup window and manages communication
- * with the consumer component. It provides the xprops object with props and
+ * with the consumer component. It provides the hostProps object with props and
  * control methods.
  *
  * @typeParam P - The props type passed from the consumer
@@ -50,7 +50,7 @@ import { create } from './component';
  * @example
  * ```typescript
  * // In host window
- * const { email, onLogin, close } = window.xprops;
+ * const { email, onLogin, close } = window.hostProps;
  * console.log('Email:', email);
  * onLogin({ id: 1, name: 'John' });
  * close();
@@ -59,8 +59,8 @@ import { create } from './component';
  * @public
  */
 export class HostComponent<P extends Record<string, unknown>> {
-  /** The xprops object containing props and control methods. */
-  public xprops: HostProps<P>;
+  /** The hostProps object containing props and control methods passed from the consumer. */
+  public hostProps: HostProps<P>;
 
   /** Event emitter for lifecycle events. */
   public event: EventEmitter;
@@ -114,22 +114,22 @@ export class HostComponent<P extends Record<string, unknown>> {
     // to prevent race conditions where consumer messages arrive before handlers exist
     this.setupMessageHandlers();
 
-    // Now safe to resolve consumer and build xprops
+    // Now safe to resolve consumer and build hostProps
     this.consumerWindow = this.resolveConsumerWindow();
     this.bridge = new FunctionBridge(this.messenger);
-    this.xprops = this.buildXProps(payload);
-    (window as unknown as { xprops: HostProps<P> }).xprops = this.xprops;
+    this.hostProps = this.buildHostProps(payload);
+    (window as unknown as { hostProps: HostProps<P> }).hostProps = this.hostProps;
 
     this.sendInit();
   }
 
   /**
-   * Returns the xprops object.
+   * Returns the hostProps object.
    *
-   * @returns The xprops object with props and control methods
+   * @returns The hostProps object with props and control methods
    */
   getProps(): HostProps<P> {
-    return this.xprops;
+    return this.hostProps;
   }
 
   /**
@@ -151,10 +151,10 @@ export class HostComponent<P extends Record<string, unknown>> {
   }
 
   /**
-   * Builds the xprops object with deserialized props and control methods.
+   * Builds the hostProps object with deserialized props and control methods.
    * @internal
    */
-  private buildXProps(payload: WindowNamePayload<P>): HostProps<P> {
+  private buildHostProps(payload: WindowNamePayload<P>): HostProps<P> {
     const deserializedProps = deserializeProps(
       payload.props,
       this.propDefinitions,
@@ -184,7 +184,7 @@ export class HostComponent<P extends Record<string, unknown>> {
         props: this.consumerProps,
         export: <T>(data: T) => this.consumerExport(data),
       },
-      getSiblings: (options?: GetSiblingsOptions) => this.getSiblings(options),
+      getPeerInstances: (options?: GetPeerInstancesOptions) => this.getPeerInstances(options),
       children: this.buildNestedComponents(payload.children),
     };
   }
@@ -344,12 +344,12 @@ export class HostComponent<P extends Record<string, unknown>> {
   }
 
   /**
-   * Gets information about sibling component instances.
+   * Gets information about peer component instances.
    * @internal
    */
-  private async getSiblings(options?: GetSiblingsOptions): Promise<SiblingInfo[]> {
+  private async getPeerInstances(options?: GetPeerInstancesOptions): Promise<SiblingInfo[]> {
     const response = await this.messenger.send<
-      { uid: string; tag: string; options?: GetSiblingsOptions },
+      { uid: string; tag: string; options?: GetPeerInstancesOptions },
       SiblingInfo[]
     >(
       this.consumerWindow,
@@ -404,7 +404,7 @@ export class HostComponent<P extends Record<string, unknown>> {
           this.consumerDomain
         );
 
-        Object.assign(this.xprops, newProps);
+        Object.assign(this.hostProps, newProps);
 
         for (const handler of this.propsHandlers) {
           try {
@@ -448,7 +448,7 @@ let hostInstance: HostComponent<Record<string, unknown>> | null = null;
  *
  * @remarks
  * This function detects if the current window was created by ForgeFrame
- * and sets up the host component with xprops. Returns null if not in
+ * and sets up the host component with hostProps. Returns null if not in
  * a ForgeFrame host context.
  *
  * @typeParam P - The props type passed from the consumer
@@ -460,7 +460,7 @@ let hostInstance: HostComponent<Record<string, unknown>> | null = null;
  * const host = initHost();
  * if (host) {
  *   console.log('Running in ForgeFrame host context');
- *   console.log('Props:', host.xprops);
+ *   console.log('Props:', host.hostProps);
  * }
  * ```
  *
@@ -506,6 +506,10 @@ export function getHost<P extends Record<string, unknown>>(): HostComponent<P> |
 /**
  * Checks if the current window is a ForgeFrame host context.
  *
+ * @remarks
+ * A "host" in ForgeFrame terminology is the embedded iframe or popup window
+ * that receives props from the consumer (the embedding app).
+ *
  * @returns True if running inside a ForgeFrame iframe or popup
  *
  * @example
@@ -522,24 +526,49 @@ export function isHost(): boolean {
 }
 
 /**
- * Gets the xprops object from the window.
+ * Checks if the current window is embedded by ForgeFrame.
  *
  * @remarks
- * This is a convenience function to access `window.xprops`.
+ * This is an alias for {@link isHost} that uses more intuitive terminology.
+ * "Embedded" means this window is running inside a ForgeFrame iframe or popup,
+ * receiving props from the consumer (the embedding app).
  *
- * @typeParam P - The props type passed from the consumer
- * @returns The xprops object or undefined if not in a host context
+ * @returns True if running inside a ForgeFrame iframe or popup
  *
  * @example
  * ```typescript
- * const xprops = getXProps();
- * if (xprops) {
- *   xprops.onLogin({ id: 1, name: 'John' });
+ * if (isEmbedded()) {
+ *   const { amount, onSuccess } = window.hostProps;
+ *   // Handle embedded context...
  * }
  * ```
  *
  * @public
  */
-export function getXProps<P extends Record<string, unknown>>(): HostProps<P> | undefined {
-  return (window as unknown as { xprops?: HostProps<P> }).xprops;
+export function isEmbedded(): boolean {
+  return isForgeFrameWindow();
+}
+
+/**
+ * Gets the hostProps object from the window.
+ *
+ * @remarks
+ * This is a convenience function to access `window.hostProps`, which contains
+ * all props passed from the consumer plus built-in control methods.
+ *
+ * @typeParam P - The props type passed from the consumer
+ * @returns The hostProps object or undefined if not in a host context
+ *
+ * @example
+ * ```typescript
+ * const props = getHostProps();
+ * if (props) {
+ *   props.onLogin({ id: 1, name: 'John' });
+ * }
+ * ```
+ *
+ * @public
+ */
+export function getHostProps<P extends Record<string, unknown>>(): HostProps<P> | undefined {
+  return (window as unknown as { hostProps?: HostProps<P> }).hostProps;
 }

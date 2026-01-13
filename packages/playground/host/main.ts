@@ -2,7 +2,7 @@
  * Host Component Example
  *
  * This demonstrates how to use ForgeFrame from the host (embedded) side.
- * The host receives props from the consumer via window.xprops.
+ * The host receives props from the consumer via window.hostProps.
  */
 import ForgeFrame, { type HostProps } from "forgeframe";
 
@@ -19,7 +19,7 @@ interface MyProps {
 }
 
 /**
- * Type window.xprops using ForgeFrame's HostProps generic.
+ * Type window.hostProps using ForgeFrame's HostProps generic.
  * HostProps<MyProps> includes:
  * - All your custom props (name, count, onGreet, etc.)
  * - Built-in ForgeFrame methods (close, resize, focus, show, hide, export, etc.)
@@ -27,7 +27,7 @@ interface MyProps {
  */
 declare global {
   interface Window {
-    xprops?: HostProps<MyProps>;
+    hostProps?: HostProps<MyProps>;
   }
 }
 
@@ -37,24 +37,24 @@ const app = document.getElementById("app")!;
  * Render when embedded via ForgeFrame
  */
 function renderEmbedded() {
-  // window.xprops is provided by ForgeFrame and contains:
+  // window.hostProps is provided by ForgeFrame and contains:
   // - All props passed from consumer (name, count, onGreet, etc.)
   // - Built-in methods (close, resize, focus, show, hide, export, etc.)
   // - Context info (uid, tag, getConsumerDomain, etc.)
-  const xprops = window.xprops!;
+  const hostProps = window.hostProps!;
 
-  // Built-in xprops keys to exclude from "Received Props"
+  // Built-in hostProps keys to exclude from "Received Props"
   const builtInKeys = new Set([
     'uid', 'tag', 'close', 'focus', 'resize', 'show', 'hide',
     'onProps', 'onError', 'getConsumer', 'getConsumerDomain', 'export',
-    'consumer', 'getSiblings', 'children'
+    'consumer', 'getPeerInstances', 'children'
   ]);
 
   const getUserProps = () => {
     const userProps: Record<string, unknown> = {};
-    for (const key of Object.keys(xprops)) {
-      if (!builtInKeys.has(key) && typeof xprops[key] !== 'function') {
-        userProps[key] = xprops[key];
+    for (const key of Object.keys(hostProps)) {
+      if (!builtInKeys.has(key) && typeof hostProps[key] !== 'function') {
+        userProps[key] = hostProps[key];
       }
     }
     return userProps;
@@ -73,7 +73,7 @@ function renderEmbedded() {
     app.innerHTML = `
       <div class="header">
         <h2><span>Host</span> Component</h2>
-        <span class="badge">${xprops.tag}</span>
+        <span class="badge">${hostProps.tag}</span>
       </div>
 
       <div class="grid">
@@ -91,9 +91,9 @@ function renderEmbedded() {
           <div class="card-content">
             <dl class="props-grid">
               <dt>uid</dt>
-              <dd>${xprops.uid.slice(0, 12)}...</dd>
+              <dd>${hostProps.uid.slice(0, 12)}...</dd>
               <dt>consumer</dt>
-              <dd>${xprops.getConsumerDomain()}</dd>
+              <dd>${hostProps.getConsumerDomain()}</dd>
             </dl>
           </div>
         </div>
@@ -173,9 +173,9 @@ function renderEmbedded() {
   const bindEventHandlers = () => {
     // Call consumer function prop
     document.getElementById("btn-greet")?.addEventListener("click", () => {
-      // xprops.name and xprops.count are always current (updated by ForgeFrame)
-      const message = `Hello! Name: ${xprops.name}, Count: ${xprops.count}`;
-      xprops.onGreet(message);
+      // hostProps.name and hostProps.count are always current (updated by ForgeFrame)
+      const message = `Hello! Name: ${hostProps.name}, Count: ${hostProps.count}`;
+      hostProps.onGreet(message);
       setStatus("Sent greeting to consumer");
     });
 
@@ -183,36 +183,36 @@ function renderEmbedded() {
     document
       .getElementById("btn-export")
       ?.addEventListener("click", async () => {
-        await xprops.export({
+        await hostProps.export({
           exportedAt: new Date().toISOString(),
-          data: { name: xprops.name, count: xprops.count },
+          data: { name: hostProps.name, count: hostProps.count },
         });
         setStatus("Exported data to consumer");
       });
 
     // Report error to consumer
     document.getElementById("btn-error")?.addEventListener("click", () => {
-      xprops.onError(new Error("Test error from host"));
+      hostProps.onError(new Error("Test error from host"));
       setStatus("Reported error to consumer");
     });
 
     // Request close (calls consumer's onClose callback)
     document.getElementById("btn-close")?.addEventListener("click", () => {
-      xprops.onClose();
+      hostProps.onClose();
     });
 
     // Resize the iframe
     document
       .getElementById("btn-resize-grow")
       ?.addEventListener("click", async () => {
-        await xprops.resize({ height: 500 });
+        await hostProps.resize({ height: 500 });
         setStatus("Resized to 500px");
       });
 
     document
       .getElementById("btn-resize-shrink")
       ?.addEventListener("click", async () => {
-        await xprops.resize({ height: 300 });
+        await hostProps.resize({ height: 300 });
         setStatus("Resized to 300px");
       });
 
@@ -220,13 +220,13 @@ function renderEmbedded() {
     document
       .getElementById("btn-focus")
       ?.addEventListener("click", async () => {
-        await xprops.focus();
+        await hostProps.focus();
         setStatus("Focused");
       });
 
     // Hide the iframe
     document.getElementById("btn-hide")?.addEventListener("click", async () => {
-      await xprops.hide();
+      await hostProps.hide();
       setStatus("Hidden (use consumer Show button)");
     });
   };
@@ -235,7 +235,7 @@ function renderEmbedded() {
   render();
 
   // Listen for prop updates from consumer
-  xprops.onProps((newProps) => {
+  hostProps.onProps((newProps) => {
     console.log("[Host] Props updated:", newProps);
     // Update UI with new values - handle any prop dynamically
     for (const [key, value] of Object.entries(newProps)) {
@@ -248,7 +248,7 @@ function renderEmbedded() {
   });
 
   // Export initial data to consumer
-  xprops.export({ ready: true, timestamp: Date.now() });
+  hostProps.export({ ready: true, timestamp: Date.now() });
 }
 
 /**
@@ -261,7 +261,7 @@ function renderStandalone() {
       <h2>Host Component</h2>
       <p>This page is designed to be embedded via ForgeFrame.</p>
       <p>Open <code>${consumerUrl}</code> and click <strong>Render</strong>.</p>
-      <p class="hint">window.xprops is not available (no ForgeFrame payload)</p>
+      <p class="hint">window.hostProps is not available (no ForgeFrame payload)</p>
     </div>
   `;
 }

@@ -720,7 +720,7 @@ export interface ForgeFrameComponentInstance<P = Record<string, unknown>, X = un
   state: Record<string, unknown>;
 
   /**
-   * Data exported from the host component via `xprops.export()`.
+   * Data exported from the host component via `hostProps.export()`.
    */
   exports?: X;
 }
@@ -748,7 +748,7 @@ export interface ForgeFrameComponentInstance<P = Record<string, unknown>, X = un
  *
  * // Check if we're in a host context
  * if (MyComponent.isHost()) {
- *   const props = MyComponent.xprops;
+ *   const props = MyComponent.hostProps;
  * }
  * ```
  *
@@ -766,17 +766,32 @@ export interface ForgeFrameComponent<P = Record<string, unknown>, X = unknown> {
   /**
    * Check if current window is a host instance of this component.
    *
+   * @remarks
+   * A "host" is the embedded iframe or popup window that receives props
+   * from the consumer (the embedding app).
+   *
    * @returns True if in host context
    */
   isHost(): boolean;
 
   /**
-   * Get xprops if in host context.
+   * Check if current window is embedded by this component.
    *
    * @remarks
-   * Only available when `isHost()` returns true.
+   * This is an alias for {@link isHost} that uses more intuitive terminology.
+   *
+   * @returns True if in embedded context
    */
-  xprops?: HostProps<P>;
+  isEmbedded(): boolean;
+
+  /**
+   * Get hostProps if in host context.
+   *
+   * @remarks
+   * Only available when `isHost()` returns true. Contains all props passed
+   * from the consumer plus built-in control methods.
+   */
+  hostProps?: HostProps<P>;
 
   /**
    * Check if we can render to a target window.
@@ -797,7 +812,7 @@ export interface ForgeFrameComponent<P = Record<string, unknown>, X = unknown> {
 // ============================================================================
 
 /**
- * Consumer namespace available in host via `xprops.consumer`.
+ * Consumer namespace available in host via `hostProps.consumer`.
  *
  * @typeParam P - The props type for the component
  *
@@ -840,13 +855,13 @@ export interface SiblingInfo {
 }
 
 /**
- * Options for getting sibling components.
+ * Options for getting peer component instances.
  *
  * @public
  */
-export interface GetSiblingsOptions {
+export interface GetPeerInstancesOptions {
   /**
-   * If true, get siblings from any consumer window (not just same consumer).
+   * If true, get peers from any consumer window (not just same consumer).
    * @defaultValue false
    */
   anyConsumer?: boolean;
@@ -857,13 +872,13 @@ export interface GetSiblingsOptions {
 // ============================================================================
 
 /**
- * Built-in properties and methods available on xprops.
+ * Built-in properties and methods available on hostProps.
  *
  * @typeParam P - The props type for the component
  *
  * @remarks
  * These are the framework-provided properties that are always available
- * on the xprops object, regardless of user-defined props.
+ * on the hostProps object, regardless of user-defined props.
  *
  * @public
  */
@@ -954,12 +969,16 @@ export interface HostPropsBuiltins<P = Record<string, unknown>> {
   consumer: ConsumerNamespace<P>;
 
   /**
-   * Get sibling component instances.
+   * Get peer component instances (other ForgeFrame components from the same consumer).
    *
-   * @param options - Options for sibling discovery
-   * @returns Promise resolving to array of sibling info
+   * @remarks
+   * Peer instances are other ForgeFrame component instances that share the same
+   * consumer window. This enables communication between multiple embedded components.
+   *
+   * @param options - Options for peer discovery
+   * @returns Promise resolving to array of peer info
    */
-  getSiblings: (options?: GetSiblingsOptions) => Promise<SiblingInfo[]>;
+  getPeerInstances: (options?: GetPeerInstancesOptions) => Promise<SiblingInfo[]>;
 
   /**
    * Nested components available for rendering.
@@ -968,15 +987,18 @@ export interface HostPropsBuiltins<P = Record<string, unknown>> {
 }
 
 /**
- * Props object available in host window via `window.xprops`.
+ * Props object available in host window via `window.hostProps`.
  *
  * @typeParam P - The props type for the component
  *
  * @remarks
- * The xprops object contains all props passed from the consumer, plus
- * built-in methods for controlling the component and communicating
- * with the consumer. User-defined props from P are properly typed,
- * and built-in methods are always available.
+ * The hostProps object (short for "host properties") contains all props passed
+ * from the consumer (the embedding app), plus built-in methods for controlling
+ * the component and communicating back to the consumer. User-defined props from
+ * P are properly typed, and built-in methods are always available.
+ *
+ * The name "hostProps" reflects that these are the props available to the host
+ * (the embedded iframe/popup), passed from the consumer (the embedding app).
  *
  * @example
  * ```typescript
@@ -986,17 +1008,17 @@ export interface HostPropsBuiltins<P = Record<string, unknown>> {
  *   onSubmit: (data: { success: boolean }) => void;
  * }
  *
- * const xprops = window.xprops as HostProps<MyProps>;
+ * const props = window.hostProps as HostProps<MyProps>;
  *
  * // User props are properly typed
- * console.log(xprops.name); // string
+ * console.log(props.name); // string
  *
  * // Call consumer callbacks
- * await xprops.onSubmit({ success: true });
+ * await props.onSubmit({ success: true });
  *
  * // Built-in methods are always available
- * await xprops.resize({ width: 500, height: 400 });
- * await xprops.close();
+ * await props.resize({ width: 500, height: 400 });
+ * await props.close();
  * ```
  *
  * @public

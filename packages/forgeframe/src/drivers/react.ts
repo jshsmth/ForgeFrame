@@ -128,13 +128,13 @@ export interface ReactDriverOptions {
 }
 
 /**
- * Type definition for a React component created by the driver.
+ * Type definition for a React component created by the integration.
  *
  * @typeParam P - The props type for the component
  *
  * @remarks
  * This interface represents the callable component function returned by
- * {@link createReactDriver}. It includes an optional `displayName` for
+ * {@link createReactComponent}. It includes an optional `displayName` for
  * React DevTools integration.
  *
  * @public
@@ -181,7 +181,7 @@ export interface ReactComponentType<P> {
  * @example
  * ```tsx
  * import React from 'react';
- * import ForgeFrame, { prop, createReactDriver } from 'forgeframe';
+ * import ForgeFrame, { prop, createReactComponent } from 'forgeframe';
  *
  * const LoginComponent = ForgeFrame.create({
  *   tag: 'login-component',
@@ -191,7 +191,7 @@ export interface ReactComponentType<P> {
  *   },
  * });
  *
- * const LoginReact = createReactDriver(LoginComponent, { React });
+ * const LoginReact = createReactComponent(LoginComponent, { React });
  *
  * // Usage in JSX:
  * <LoginReact onLogin={(user) => console.log(user)} />
@@ -199,7 +199,7 @@ export interface ReactComponentType<P> {
  *
  * @public
  */
-export function createReactDriver<P extends Record<string, unknown>, X = unknown>(
+export function createReactComponent<P extends Record<string, unknown>, X = unknown>(
   Component: ForgeFrameComponent<P, X>,
   options: ReactDriverOptions
 ): ReactComponentType<FullReactComponentProps<P>> {
@@ -308,15 +308,15 @@ export function createReactDriver<P extends Record<string, unknown>, X = unknown
 }
 
 /**
- * Creates a curried React driver factory with a pre-configured React instance.
+ * Creates a curried React component factory with a pre-configured React instance.
  *
  * @param React - The React library instance to use for all created components
  *
  * @returns A function that creates React wrappers for ForgeFrame components
  *
  * @remarks
- * This is a higher-order function that simplifies creating multiple React drivers
- * with the same React instance. It returns a driver factory that can be reused
+ * This is a higher-order function that simplifies creating multiple React components
+ * with the same React instance. It returns a factory that can be reused
  * across multiple ForgeFrame components.
  *
  * This pattern is useful when you have many ForgeFrame components and want to
@@ -326,24 +326,24 @@ export function createReactDriver<P extends Record<string, unknown>, X = unknown
  * ```tsx
  * import React from 'react';
  * import ForgeFrame from 'forgeframe';
- * import { withReactDriver } from 'forgeframe/drivers/react';
+ * import { withReactComponent } from 'forgeframe/drivers/react';
  *
- * // Create a reusable driver factory
- * const createDriver = withReactDriver(React);
+ * // Create a reusable component factory
+ * const createComponent = withReactComponent(React);
  *
  * // Create multiple React components using the same factory
  * const LoginComponent = ForgeFrame.create({ tag: 'login', url: '...' });
  * const ProfileComponent = ForgeFrame.create({ tag: 'profile', url: '...' });
  *
- * const LoginReact = createDriver(LoginComponent);
- * const ProfileReact = createDriver(ProfileComponent);
+ * const LoginReact = createComponent(LoginComponent);
+ * const ProfileReact = createComponent(ProfileComponent);
  * ```
  *
  * @public
  */
-export function withReactDriver(React: ReactLike) {
+export function withReactComponent(React: ReactLike) {
   /**
-   * Driver factory function that wraps a ForgeFrame component.
+   * Factory function that wraps a ForgeFrame component as a React component.
    *
    * @typeParam P - The props type defined in the ForgeFrame component
    * @typeParam X - The export type for data shared from the host component
@@ -353,11 +353,11 @@ export function withReactDriver(React: ReactLike) {
    *
    * @internal
    */
-  return function driver<P extends Record<string, unknown>, X = unknown>(
+  return function createComponent<P extends Record<string, unknown>, X = unknown>(
     Component: ForgeFrameComponent<P, X>
   ): ReactComponentType<FullReactComponentProps<P>> {
-    return createReactDriver(Component, { React });
+    return createReactComponent(Component, { React });
   };
 }
 
-export default createReactDriver;
+export default createReactComponent;

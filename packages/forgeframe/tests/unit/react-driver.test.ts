@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createReactDriver, withReactDriver } from '@/drivers/react';
+import { createReactComponent, withReactComponent } from '@/drivers/react';
 import type { ZoidComponent, ZoidComponentInstance } from '@/types';
 import type { EventEmitter } from '@/events/emitter';
 
@@ -92,7 +92,7 @@ const createMockComponent = <P extends Record<string, unknown>>(): ZoidComponent
   return component;
 };
 
-describe('createReactDriver', () => {
+describe('createReactComponent', () => {
   let mockReact: ReturnType<typeof createMockReact>;
   let mockComponent: ReturnType<typeof createMockComponent>;
 
@@ -107,19 +107,19 @@ describe('createReactDriver', () => {
   });
 
   it('should create a React component', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     expect(typeof ReactComponent).toBe('function');
   });
 
   it('should set displayName', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     expect(ReactComponent.displayName).toBe('ForgeFrame(TestComponent)');
   });
 
   it('should render container div', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     ReactComponent({});
 
@@ -131,7 +131,7 @@ describe('createReactDriver', () => {
   });
 
   it('should apply className and style props', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     ReactComponent({
       className: 'custom-class',
@@ -148,7 +148,7 @@ describe('createReactDriver', () => {
   });
 
   it('should call useRef for container', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     ReactComponent({});
 
@@ -156,7 +156,7 @@ describe('createReactDriver', () => {
   });
 
   it('should call useEffect for initialization', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     ReactComponent({});
 
@@ -165,7 +165,7 @@ describe('createReactDriver', () => {
   });
 
   it('should call useState for error state', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     ReactComponent({});
 
@@ -173,13 +173,13 @@ describe('createReactDriver', () => {
   });
 
   it('should call forwardRef', () => {
-    createReactDriver(mockComponent, { React: mockReact as never });
+    createReactComponent(mockComponent, { React: mockReact as never });
 
     expect(mockReact.forwardRef).toHaveBeenCalled();
   });
 });
 
-describe('withReactDriver', () => {
+describe('withReactComponent', () => {
   let mockReact: ReturnType<typeof createMockReact>;
 
   beforeEach(() => {
@@ -192,13 +192,13 @@ describe('withReactDriver', () => {
   });
 
   it('should return a driver factory', () => {
-    const driver = withReactDriver(mockReact as never);
+    const driver = withReactComponent(mockReact as never);
 
     expect(typeof driver).toBe('function');
   });
 
   it('should create React component from ForgeFrame component', () => {
-    const driver = withReactDriver(mockReact as never);
+    const driver = withReactComponent(mockReact as never);
     const mockComponent = createMockComponent();
 
     const ReactComponent = driver(mockComponent);
@@ -207,7 +207,7 @@ describe('withReactDriver', () => {
   });
 
   it('should allow creating multiple components', () => {
-    const driver = withReactDriver(mockReact as never);
+    const driver = withReactComponent(mockReact as never);
 
     const Component1 = driver(createMockComponent());
     const Component2 = driver(createMockComponent());
@@ -231,7 +231,7 @@ describe('ReactComponentProps', () => {
   });
 
   it('should accept onRendered callback', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
     const onRendered = vi.fn();
 
     ReactComponent({ onRendered });
@@ -241,7 +241,7 @@ describe('ReactComponentProps', () => {
   });
 
   it('should accept onError callback', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
     const onError = vi.fn();
 
     ReactComponent({ onError });
@@ -250,7 +250,7 @@ describe('ReactComponentProps', () => {
   });
 
   it('should accept onClose callback', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
     const onClose = vi.fn();
 
     ReactComponent({ onClose });
@@ -259,7 +259,7 @@ describe('ReactComponentProps', () => {
   });
 
   it('should accept context prop', () => {
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     ReactComponent({ context: 'popup' });
 
@@ -273,7 +273,7 @@ describe('ReactComponentProps', () => {
     }
 
     const typedMockComponent = createMockComponent<TestProps>();
-    const ReactComponent = createReactDriver(typedMockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(typedMockComponent, { React: mockReact as never });
 
     ReactComponent({
       customProp: 'test',
@@ -311,7 +311,7 @@ describe('Error handling', () => {
     };
 
     const mockComponent = createMockComponent();
-    const ReactComponent = createReactDriver(mockComponent, { React: customMockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: customMockReact as never });
 
     // First render - no error
     ReactComponent({});
@@ -344,7 +344,7 @@ describe('Lifecycle integration', () => {
     const onError = vi.fn();
     const onClose = vi.fn();
 
-    const ReactComponent = createReactDriver(mockComponent, { React: mockReact as never });
+    const ReactComponent = createReactComponent(mockComponent, { React: mockReact as never });
 
     ReactComponent({
       onRendered,

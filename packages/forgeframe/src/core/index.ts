@@ -12,13 +12,18 @@ export {
   create,
   getComponent,
   destroy,
-  destroyComponents,
+  destroyByTag,
   destroyAll,
   unregisterComponent,
   clearComponents,
-  isHost,
-  getXProps,
 } from './component';
 
 export { ConsumerComponent } from './consumer';
-export { HostComponent, initHost, getHost } from './host';
+export {
+  HostComponent,
+  initHost,
+  getHost,
+  isHost,
+  isEmbedded,
+  getHostProps,
+} from './host';
