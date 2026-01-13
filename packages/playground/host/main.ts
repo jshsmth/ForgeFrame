@@ -52,9 +52,10 @@ function renderEmbedded() {
 
   const getUserProps = () => {
     const userProps: Record<string, unknown> = {};
-    for (const key of Object.keys(hostProps)) {
-      if (!builtInKeys.has(key) && typeof hostProps[key] !== 'function') {
-        userProps[key] = hostProps[key];
+    const propsRecord = hostProps as unknown as Record<string, unknown>;
+    for (const key of Object.keys(propsRecord)) {
+      if (!builtInKeys.has(key) && typeof propsRecord[key] !== 'function') {
+        userProps[key] = propsRecord[key];
       }
     }
     return userProps;

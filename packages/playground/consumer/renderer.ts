@@ -7,6 +7,7 @@ import { log, setStatus, setButtonsEnabled } from './logger';
 import {
   currentContext,
   currentIframeStyle,
+  currentConfig,
   currentPropValues,
   componentCache,
   instance,
@@ -15,7 +16,6 @@ import {
   setInstance,
   setModalOverlay,
   setModalBody,
-  setCurrentConfig,
   setPropValue,
 } from './state';
 import type { PlaygroundConfig, DynamicProps } from './types';
@@ -219,20 +219,13 @@ export function createComponent(config: PlaygroundConfig, context: 'iframe' | 'p
   return component;
 }
 
-export async function renderComponent(parseConfig: () => PlaygroundConfig | null) {
+export async function renderComponent() {
   if (instance) {
     log('Component already rendered', 'info');
     return;
   }
 
-  const config = parseConfig();
-  if (!config) {
-    log('Cannot render: invalid configuration', 'error');
-    setStatus('Invalid config', 'error');
-    return;
-  }
-
-  setCurrentConfig(config);
+  const config = currentConfig;
 
   // Sync prop values from inputs before render
   elements.propsBar.querySelectorAll('input[data-prop]').forEach((input) => {

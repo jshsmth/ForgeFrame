@@ -1,11 +1,10 @@
 /**
  * ForgeFrame Playground - Consumer
  *
- * Interactive playground for testing ForgeFrame component configuration.
- * Edit JSON config, see generated code, and test the component live.
+ * Interactive playground for testing ForgeFrame components.
  */
 import { elements } from './elements';
-import { log, showEditorError, clearLog } from './logger';
+import { log, clearLog } from './logger';
 import { renderPropsBar } from './props-bar';
 import { updateCodePreview } from './code-generator';
 import { renderComponent } from './renderer';
@@ -17,51 +16,8 @@ import {
   instance,
   setCurrentContext,
   setCurrentIframeStyle,
-  setCurrentConfig,
-  resetPropValues,
 } from './state';
-import type { PlaygroundConfig, RenderContext, IframeStyle } from './types';
-
-// ============================================================================
-// JSON Editor
-// ============================================================================
-
-function parseConfig(): PlaygroundConfig | null {
-  try {
-    const parsed = JSON.parse(elements.jsonEditor.value);
-    showEditorError(null);
-    return parsed;
-  } catch (e) {
-    showEditorError(`Invalid JSON: ${(e as Error).message}`);
-    return null;
-  }
-}
-
-function initEditor() {
-  elements.jsonEditor.value = JSON.stringify(DEFAULT_CONFIG, null, 2);
-  resetPropValues();
-  renderPropsBar(DEFAULT_CONFIG);
-  updateCodePreview(DEFAULT_CONFIG, currentContext, currentIframeStyle);
-}
-
-elements.jsonEditor.addEventListener('input', () => {
-  const config = parseConfig();
-  if (config) {
-    setCurrentConfig(config);
-    renderPropsBar(config);
-    updateCodePreview(config, currentContext, currentIframeStyle);
-  }
-});
-
-elements.btnReset.addEventListener('click', () => {
-  setCurrentConfig({ ...DEFAULT_CONFIG });
-  resetPropValues();
-  elements.jsonEditor.value = JSON.stringify(DEFAULT_CONFIG, null, 2);
-  showEditorError(null);
-  renderPropsBar(DEFAULT_CONFIG);
-  updateCodePreview(DEFAULT_CONFIG, currentContext, currentIframeStyle);
-  log('Config reset to defaults', 'info');
-});
+import type { RenderContext, IframeStyle } from './types';
 
 // ============================================================================
 // Mode Toggle
@@ -100,7 +56,7 @@ elements.styleButtons.forEach((btn) => {
 // Event Handlers
 // ============================================================================
 
-elements.btnRender.addEventListener('click', () => renderComponent(parseConfig));
+elements.btnRender.addEventListener('click', () => renderComponent());
 
 elements.btnClose.addEventListener('click', () => {
   instance?.close();
@@ -123,33 +79,22 @@ elements.btnHide.addEventListener('click', () => {
 
 elements.btnClearLog.addEventListener('click', clearLog);
 
-// Handle tab key in editor
-elements.jsonEditor.addEventListener('keydown', (e) => {
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    const start = elements.jsonEditor.selectionStart;
-    const end = elements.jsonEditor.selectionEnd;
-    elements.jsonEditor.value =
-      elements.jsonEditor.value.substring(0, start) +
-      '  ' +
-      elements.jsonEditor.value.substring(end);
-    elements.jsonEditor.selectionStart = elements.jsonEditor.selectionEnd = start + 2;
-  }
-});
-
 // ============================================================================
 // Initialize
 // ============================================================================
 
-function updateHeaderInfo() {
+function init() {
+  renderPropsBar(DEFAULT_CONFIG);
+  updateCodePreview(DEFAULT_CONFIG, currentContext, currentIframeStyle);
+
   const headerInfo = document.getElementById('header-info');
   if (headerInfo) {
     const consumerUrl = new URL(window.location.href).host;
     const hostUrl = new URL(currentConfig.url).host;
     headerInfo.textContent = `${consumerUrl} → ${hostUrl}`;
   }
+
+  log('Playground ready', 'success');
 }
 
-initEditor();
-updateHeaderInfo();
-log('Playground ready', 'success');
+init();

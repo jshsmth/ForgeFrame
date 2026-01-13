@@ -139,16 +139,15 @@ ${styleStr}
 ${propsStr}
 });
 
-// Create instance with props
-const instance = MyComponent({
+// Create and render component
+const myComponent = MyComponent({
 ${instancePropsEntries},
   onGreet: (msg) => console.log('Greeting:', msg),
-  onClose: () => instance.close(),
+  onClose: () => myComponent.close(),
   onError: (err) => console.error(err),
 });
 
-// Render to body for modal overlay
-await instance.render(document.body, 'iframe');`;
+await myComponent.render(document.body);`;
   }
 
   // Non-modal (embedded iframe or popup)
@@ -167,16 +166,15 @@ ${styleStr}
 ${propsStr}
 });
 
-// Create instance with props
-const instance = MyComponent({
+// Create and render component
+const myComponent = MyComponent({
 ${instancePropsEntries},
   onGreet: (msg) => console.log('Greeting:', msg),
-  onClose: () => instance.close(),
+  onClose: () => myComponent.close(),
   onError: (err) => console.error(err),
 });
 
-// Render the component
-await instance.render('#container', '${context}');`;
+await myComponent.render('#container'${context === 'popup' ? `, '${context}'` : ''});`;
 }
 
 export function updateCodePreview(
